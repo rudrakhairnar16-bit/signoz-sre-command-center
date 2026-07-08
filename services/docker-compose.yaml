@@ -1,0 +1,52 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    container_name: svc-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    environment:
+      - OTLP_ENDPOINT=signoz-ingester-1:4317
+    networks:
+      - signoz-network
+    ports:
+      - "4317"
+      - "4318"
+
+  fastapi-svc:
+    build: ./fastapi
+    container_name: fastapi-svc
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
+      - EXPRESS_URL=http://express-svc:3000
+    networks:
+      - signoz-network
+    ports:
+      - "8001:8000"
+
+  express-svc:
+    build: ./express
+    container_name: express-svc
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
+      - GOWORKER_URL=http://goworker-svc:8080
+    networks:
+      - signoz-network
+    ports:
+      - "3001:3000"
+
+  goworker-svc:
+    build: ./goworker
+    container_name: goworker-svc
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_INSECURE=true
+    networks:
+      - signoz-network
+    ports:
+      - "8081:8080"
+
+networks:
+  signoz-network:
+    external: true
+    name: signoz-network
