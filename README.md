@@ -82,14 +82,16 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full diagram.
 - Docker Desktop 29+
 - Foundry CLI (`foundryctl.exe`)
 - Ollama (with llama3.2:3b pulled)
+- Python 3.12+ virtual environment in `ai-agent/venv/` (run `python -m venv ai-agent/venv && ai-agent/venv/bin/pip install -r ai-agent/requirements.txt`)
 
 ### 1. Deploy SigNoz
 ```bash
 foundry deploy
 ```
 
-### 2. Start Custom Services
+### 2. Create Network & Start Custom Services
 ```bash
+docker network create signoz-network 2>/dev/null || true
 cd services
 docker compose up -d
 ```
@@ -97,22 +99,27 @@ docker compose up -d
 ### 3. Start AI Agent
 ```bash
 cd ai-agent
-.\venv\Scripts\streamlit run app.py
+# Windows: venv\Scripts\streamlit run app.py
+# POSIX:   venv/bin/streamlit run app.py
 # Open http://localhost:8501
 ```
 
 ### 4. Start Remediation Webhook
 ```bash
-.\ai-agent\venv\Scripts\python auto-remediation\webhook.py
+# Windows: ai-agent\venv\Scripts\python auto-remediation\webhook.py
+# POSIX:   ai-agent/venv/bin/python auto-remediation/webhook.py
 ```
 
 ### 5. Run Demo
 ```bash
 # Flood a service + trigger auto-remediation:
-.\ai-agent\venv\Scripts\python auto-remediation\simulate-failure.py --mode flood --service fastapi-svc
+python auto-remediation/simulate-failure.py --mode flood --service fastapi-svc
 
 # Or just test the webhook:
-.\ai-agent\venv\Scripts\python auto-remediation\simulate-failure.py --mode webhook-only
+python auto-remediation/simulate-failure.py --mode webhook-only
+
+# PowerShell demo (Windows):
+powershell -ExecutionPolicy Bypass -File demo/demo.ps1
 ```
 
 ## Key URLs
@@ -131,7 +138,6 @@ cd ai-agent
 ```
 signoz-sre-command-center/
 ├── casting.yaml              # Foundry deployment config
-├── casting.yaml.lock
 ├── pours/deployment/         # Foundry compose output
 ├── services/                 # 3 custom instrumented services
 │   ├── fastapi/              # Python + OTel SDK

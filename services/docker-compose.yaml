@@ -6,12 +6,13 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     environment:
-      - OTLP_ENDPOINT=signoz-ingester-1:4317
+      - OTLP_ENDPOINT=signoz-ingester:4317
     networks:
       - signoz-network
     ports:
-      - "4317"
-      - "4318"
+      - "4317:4317"
+      - "4318:4318"
+    restart: unless-stopped
 
   fastapi-svc:
     build: ./fastapi
@@ -23,6 +24,13 @@ services:
       - signoz-network
     ports:
       - "8001:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   express-svc:
     build: ./express
@@ -34,6 +42,13 @@ services:
       - signoz-network
     ports:
       - "3001:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   goworker-svc:
     build: ./goworker
@@ -45,6 +60,13 @@ services:
       - signoz-network
     ports:
       - "8081:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 networks:
   signoz-network:

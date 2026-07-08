@@ -24,7 +24,7 @@ class TraceIdFilter(logging.Filter):
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(name)s] trace_id=%(trace_id)s span_id=%(span_id)s %(message)s',
+    format='%(asctime)s [%(name)s] trace_id=%(trace_id)s span_id=%(span_id)s express_status=%(express_status)s %(message)s',
 )
 logger = logging.getLogger("fastapi-svc")
 logger.addFilter(TraceIdFilter())
@@ -51,9 +51,13 @@ async def process():
         span.set_attribute("slo_tier", "critical")
         span.set_attribute("service.version", "1.0.0")
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{EXPRESS_URL}/execute")
-            result = resp.json()
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"{EXPRESS_URL}/execute", timeout=5.0)
+                result = resp.json()
+        except Exception as e:
+            logger.error("Express call failed: %s", e)
+            result = {"status": "error", "error": str(e)}
 
         span.set_attribute("express.status", result.get("status", "unknown"))
         span.add_event("express_response_received", {"status": result.get("status", "unknown")})

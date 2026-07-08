@@ -2,6 +2,7 @@ import json
 import logging
 import subprocess
 import os
+import requests
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 
@@ -20,13 +21,12 @@ SERVICE_MAP = {
 
 COMPOSE_DIR = os.getenv(
     "COMPOSE_DIR",
-    r"C:\Users\Rudra\Desktop\Signoz_Agent\Track_2\signoz-sre-command-center\services"
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "services")
 )
 
 
 def log_to_signoz(service: str, alert_name: str, status: str):
     try:
-        import requests
         payload = {
             "title": f"Auto-remediation for {service}",
             "text": json.dumps({
@@ -53,11 +53,19 @@ def restart_service(service: str) -> str:
     container = SERVICE_MAP.get(service, service)
     logger.info("Restarting container: %s", container)
     try:
+        compose_cmd = ["docker", "compose"]
         result = subprocess.run(
-            ["docker", "compose", "restart", container],
+            [*compose_cmd, "restart", container],
             capture_output=True, text=True, timeout=30,
             cwd=COMPOSE_DIR
         )
+        if result.returncode != 0:
+            compose_cmd = ["docker-compose"]
+            result = subprocess.run(
+                [*compose_cmd, "restart", container],
+                capture_output=True, text=True, timeout=30,
+                cwd=COMPOSE_DIR
+            )
         if result.returncode == 0:
             return f"success: {container} restarted"
         else:

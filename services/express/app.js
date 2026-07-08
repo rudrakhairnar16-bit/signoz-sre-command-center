@@ -42,31 +42,36 @@ function logWithTrace(msg) {
 }
 
 app.get('/execute', async (req, res) => {
-  const span = api.trace.getSpan(api.context.active());
-  if (span) {
-    span.setAttribute('slo_tier', 'standard');
-    span.setAttribute('service.version', '1.0.0');
+  try {
+    const span = api.trace.getSpan(api.context.active());
+    if (span) {
+      span.setAttribute('slo_tier', 'standard');
+      span.setAttribute('service.version', '1.0.0');
+    }
+    logWithTrace('Processing execute request');
+
+    const result = await new Promise((resolve, reject) => {
+      http.get(`${GOWORKER_URL}/work`, (resp) => {
+        let data = '';
+        resp.on('data', (chunk) => data += chunk);
+        resp.on('end', () => {
+          try { resolve(JSON.parse(data)); }
+          catch (e) { reject(e); }
+        });
+      }).on('error', reject);
+    });
+
+    if (span) {
+      span.setAttribute('goworker.status', result.status);
+      span.addEvent('goworker_response_received', { status: result.status });
+    }
+    logWithTrace(`GoWorker response received: ${result.status}`);
+
+    res.json({ service: 'express-svc', goworker_result: result });
+  } catch (err) {
+    logWithTrace(`Error calling GoWorker: ${err.message}`);
+    res.status(502).json({ service: 'express-svc', error: err.message });
   }
-  logWithTrace('Processing execute request');
-
-  const result = await new Promise((resolve, reject) => {
-    http.get(`${GOWORKER_URL}/work`, (resp) => {
-      let data = '';
-      resp.on('data', (chunk) => data += chunk);
-      resp.on('end', () => {
-        try { resolve(JSON.parse(data)); }
-        catch (e) { reject(e); }
-      });
-    }).on('error', reject);
-  });
-
-  if (span) {
-    span.setAttribute('goworker.status', result.status);
-    span.addEvent('goworker_response_received', { status: result.status });
-  }
-  logWithTrace(`GoWorker response received: ${result.status}`);
-
-  res.json({ service: 'express-svc', goworker_result: result });
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));

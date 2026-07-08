@@ -1,10 +1,10 @@
+import os
 import requests
-import json
 from typing import Optional
 
-MCP_SERVER_URL = "http://localhost:8000/mcp"
-SIGNOZ_API_KEY = "dbe4dc0e-69a7-4245-81cc-37ad39178e04"
-REMEDIATION_URL = "http://localhost:9000/remediate"
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp")
+SIGNOZ_API_KEY = os.getenv("SIGNOZ_API_KEY", "dbe4dc0e-69a7-4245-81cc-37ad39178e04")
+REMEDIATION_URL = os.getenv("REMEDIATION_URL", "http://localhost:9000/remediate")
 
 def _call_mcp(tool_name: str, arguments: dict = None) -> str:
     payload = {
@@ -22,6 +22,7 @@ def _call_mcp(tool_name: str, arguments: dict = None) -> str:
         headers={"SIGNOZ-API-KEY": SIGNOZ_API_KEY},
         timeout=30
     )
+    resp.raise_for_status()
     result = resp.json()
     if "error" in result:
         return f"Error: {result['error']}"

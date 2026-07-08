@@ -12,14 +12,19 @@ import subprocess
 import time
 import requests
 import sys
+import os
 
 SERVICE_PORTS = {
-    "fastapi-svc": ("http://localhost:8081", "GET", "/process"),
-    "express-svc": ("http://localhost:8082", "GET", "/execute"),
-    "goworker-svc": ("http://localhost:8083", "GET", "/work"),
+    "fastapi-svc": ("http://localhost:8001", "GET", "/process"),
+    "express-svc": ("http://localhost:3001", "GET", "/execute"),
+    "goworker-svc": ("http://localhost:8081", "GET", "/work"),
 }
 
 WEBHOOK_URL = "http://localhost:9000/remediate"
+COMPOSE_DIR = os.getenv(
+    "COMPOSE_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "services")
+)
 
 
 def flood_service(base_url: str, method: str, path: str, count: int = 500):
@@ -46,13 +51,14 @@ def flood_service(base_url: str, method: str, path: str, count: int = 500):
 
 def stop_service(service: str):
     container = service
-    print(f"Stopping container {container}...")
+    print(f"Stopping {container} via docker compose...")
     result = subprocess.run(
-        ["docker", "stop", container],
-        capture_output=True, text=True, timeout=15
+        ["docker", "compose", "stop", container],
+        capture_output=True, text=True, timeout=15,
+        cwd=COMPOSE_DIR
     )
     if result.returncode == 0:
-        print(f"Container {container} stopped")
+        print(f"Service {container} stopped")
     else:
         print(f"Failed to stop: {result.stderr.strip()}")
 

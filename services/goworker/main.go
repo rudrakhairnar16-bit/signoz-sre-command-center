@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -26,7 +27,18 @@ var tracer = otel.Tracer("goworker-svc")
 func initTracer() {
 	ctx := context.Background()
 
-	exporter, err := otlptracehttp.New(ctx, otlptracehttp.WithInsecure())
+	otlpEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if otlpEndpoint == "" {
+		otlpEndpoint = "http://otel-collector:4318"
+	}
+	otlpEndpoint = strings.TrimPrefix(otlpEndpoint, "http://")
+	otlpEndpoint = strings.TrimPrefix(otlpEndpoint, "https://")
+	otlpEndpoint = strings.TrimSuffix(otlpEndpoint, "/v1/traces")
+
+	exporter, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithEndpoint(otlpEndpoint),
+	)
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)
 	}
