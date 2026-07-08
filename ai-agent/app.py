@@ -23,11 +23,12 @@ if st.sidebar.button("Clear conversation"):
 
 st.sidebar.markdown("### Example queries")
 st.sidebar.markdown("- What services are running?")
-st.sidebar.markdown("- Show me error traces from the last hour")
+st.sidebar.markdown("- Which service has the highest error rate?")
+st.sidebar.markdown("- Show me traces from fastapi-svc")
+st.sidebar.markdown("- Check ERROR logs for express-svc")
+st.sidebar.markdown("- List all alert rules")
 st.sidebar.markdown("- What are my p99 latencies?")
-st.sidebar.markdown("- List all active alerts")
 st.sidebar.markdown("- How do I create a dashboard?")
-st.sidebar.markdown("- Check logs for express-svc")
 st.sidebar.markdown("- Restart fastapi-svc (remediation)")
 
 for msg in st.session_state.messages:

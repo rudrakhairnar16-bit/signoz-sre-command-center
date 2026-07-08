@@ -81,6 +81,21 @@ def trigger_webhook(service: str, alert_name: str = "simulated-burn-rate-alert")
         return None
 
 
+STOPPED_SERVICES = []
+
+
+def _ensure_running(services: list):
+    """Restart any stopped services after test completes."""
+    for svc in services:
+        container = list(SERVICE_PORTS.keys())[0] if svc not in SERVICE_PORTS else svc
+        print(f"Ensuring {svc} is running...")
+        subprocess.run(
+            ["docker", "compose", "start", svc],
+            capture_output=True, text=True, timeout=15,
+            cwd=COMPOSE_DIR
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Simulate service failure and auto-remediation")
     parser.add_argument("--service", default="fastapi-svc", choices=list(SERVICE_PORTS.keys()))
@@ -94,26 +109,31 @@ def main():
 
     info = SERVICE_PORTS[args.service]
 
-    if args.mode == "flood":
-        print(f"\n=== Phase 1: Flooding {args.service} ===")
-        flood_service(*info, count=args.count)
-        print(f"\n=== Phase 2: Checking service health ===")
-        time.sleep(2)
-        try:
-            r = requests.get(info[0], timeout=3)
-            print(f"Service responded: {r.status_code}")
-        except Exception as e:
-            print(f"Service unreachable: {e}")
-            print("Service may be degraded. Triggering remediation...")
+    try:
+        if args.mode == "flood":
+            print(f"\n=== Phase 1: Flooding {args.service} ===")
+            flood_service(*info, count=args.count)
+            print(f"\n=== Phase 2: Checking service health ===")
+            time.sleep(2)
+            try:
+                r = requests.get(info[0], timeout=3)
+                print(f"Service responded: {r.status_code}")
+            except Exception as e:
+                print(f"Service unreachable: {e}")
+                print("Service may be degraded. Triggering remediation...")
+                trigger_webhook(args.service)
+
+        elif args.mode == "stop":
+            print(f"\n=== Stopping {args.service} ===")
+            stop_service(args.service)
+            STOPPED_SERVICES.append(args.service)
+            print(f"\n=== Triggering remediation webhook ===")
             trigger_webhook(args.service)
 
-    elif args.mode == "stop":
-        print(f"\n=== Stopping {args.service} ===")
-        stop_service(args.service)
-        print(f"\n=== Triggering remediation webhook ===")
-        trigger_webhook(args.service)
-
-    print("\nDone.")
+        print("\nDone.")
+    finally:
+        if STOPPED_SERVICES:
+            _ensure_running(STOPPED_SERVICES)
 
 
 if __name__ == "__main__":

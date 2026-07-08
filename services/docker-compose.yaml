@@ -9,9 +9,6 @@ services:
       - OTLP_ENDPOINT=signoz-ingester:4317
     networks:
       - signoz-network
-    ports:
-      - "4317:4317"
-      - "4318:4318"
     restart: unless-stopped
 
   fastapi-svc:
@@ -26,7 +23,7 @@ services:
       - "8001:8000"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

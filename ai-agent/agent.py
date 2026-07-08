@@ -1,17 +1,65 @@
+from typing import Optional
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
-from mcp_tool import query_signoz, remediate_service
+from mcp_tool import (
+    list_services as _list_services,
+    search_traces as _search_traces,
+    search_logs as _search_logs,
+    list_alerts as _list_alerts,
+    list_dashboards as _list_dashboards,
+    get_metrics as _get_metrics,
+    search_docs as _search_docs,
+    remediate_service as _remediate_service,
+)
+
 
 @tool
-def signoz_mcp(query: str) -> str:
-    """Query SigNoz observability data about services, traces, logs, alerts, dashboards, metrics, and SLOs. Use this to check service health, find errors, or investigate issues."""
-    return query_signoz(query)
+def signoz_list_services(time_range: Optional[str] = None, limit: Optional[int] = None) -> str:
+    """List all services monitored by SigNoz with their call rates, error rates, and latencies. Use time_range like '1h', '6h', '24h'."""
+    return _list_services(time_range or "1h", limit or 50)
+
+
+@tool
+def signoz_search_traces(service_name: Optional[str] = None, time_range: Optional[str] = None, limit: Optional[int] = None) -> str:
+    """Search traces in SigNoz. Optionally filter by service name. Use time_range like '1h', '6h', '24h'."""
+    return _search_traces(service_name or "", time_range or "1h", limit or 10)
+
+
+@tool
+def signoz_search_logs(service_name: Optional[str] = None, time_range: Optional[str] = None, severity: Optional[str] = None, limit: Optional[int] = None) -> str:
+    """Search logs in SigNoz. Optionally filter by service name and severity (e.g., ERROR, WARN, INFO). Use time_range like '1h', '6h', '24h'."""
+    return _search_logs(service_name or "", time_range or "1h", severity or "", limit or 10)
+
+
+@tool
+def signoz_list_alerts() -> str:
+    """List all configured alert rules in SigNoz with their severity and status."""
+    return _list_alerts()
+
+
+@tool
+def signoz_list_dashboards() -> str:
+    """List all dashboards configured in SigNoz."""
+    return _list_dashboards()
+
+
+@tool
+def signoz_get_metrics(time_range: Optional[str] = None) -> str:
+    """Get metrics from SigNoz including latency, P99, and request rates. Use time_range like '1h', '6h', '24h'."""
+    return _get_metrics(time_range or "1h")
+
+
+@tool
+def signoz_search_docs(query_text: str, limit: Optional[int] = None) -> str:
+    """Search SigNoz documentation for how-to guides, troubleshooting, and feature explanations."""
+    return _search_docs(query_text, limit or 5)
+
 
 @tool
 def signoz_remediate(service: str) -> str:
-    """Restart a failing service. Use this when a service is unhealthy, has high error rates, or needs recovery. Services: fastapi-svc, express-svc, goworker-svc."""
-    return remediate_service(service)
+    """Restart a failing service. Use this when a service has high error rates, is unhealthy, or needs recovery. Valid services: fastapi-svc, express-svc, goworker-svc."""
+    return _remediate_service(service)
 
 
 def create_agent(model: str = "llama3.2:3b"):
@@ -19,6 +67,15 @@ def create_agent(model: str = "llama3.2:3b"):
         model=model,
         temperature=0
     )
-    tools = [signoz_mcp, signoz_remediate]
+    tools = [
+        signoz_list_services,
+        signoz_search_traces,
+        signoz_search_logs,
+        signoz_list_alerts,
+        signoz_list_dashboards,
+        signoz_get_metrics,
+        signoz_search_docs,
+        signoz_remediate,
+    ]
     agent = create_react_agent(llm, tools)
     return agent

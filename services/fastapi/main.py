@@ -2,6 +2,7 @@ import os
 import logging
 import httpx
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
@@ -57,11 +58,13 @@ async def process():
                 result = resp.json()
         except Exception as e:
             logger.error("Express call failed: %s", e)
-            result = {"status": "error", "error": str(e)}
+            span.set_attribute("error", True)
+            span.record_exception(e)
+            return JSONResponse(status_code=503, content={"service": "fastapi-svc", "error": str(e)})
 
-        span.set_attribute("express.status", result.get("status", "unknown"))
-        span.add_event("express_response_received", {"status": result.get("status", "unknown")})
-        logger.info("Express response received", extra={"express_status": result.get("status", "unknown")})
+    span.set_attribute("express.status", result.get("status", "unknown"))
+    span.add_event("express_response_received", {"status": result.get("status", "unknown")})
+    logger.info("Express response received", extra={"express_status": result.get("status", "unknown")})
 
     return {"service": "fastapi-svc", "express_result": result}
 

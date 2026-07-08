@@ -76,8 +76,23 @@ def restart_service(service: str) -> str:
         return f"failed: {str(e)}"
 
 
+WEBHOOK_API_KEY = os.getenv("WEBHOOK_API_KEY", "")
+
+
+def _check_auth():
+    if not WEBHOOK_API_KEY:
+        return None
+    key = request.headers.get("x-api-key") or request.headers.get("X-API-Key") or ""
+    if key != WEBHOOK_API_KEY:
+        return jsonify({"error": "unauthorized"}), 401
+    return None
+
+
 @app.route("/remediate", methods=["POST"])
 def remediate():
+    auth_err = _check_auth()
+    if auth_err:
+        return auth_err
     data = request.get_json(silent=True) or {}
     logger.info("Webhook received: %s", json.dumps(data, indent=2))
 
