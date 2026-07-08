@@ -33,12 +33,21 @@ app.use(express.json());
 const api = require('@opentelemetry/api');
 const tracer = api.trace.getTracer('express-svc');
 
+function logWithTrace(msg) {
+  const span = api.trace.getSpan(api.context.active());
+  const ctx = span ? span.spanContext() : null;
+  const tid = ctx ? ctx.traceId : '';
+  const sid = ctx ? ctx.spanId : '';
+  console.log(`${new Date().toISOString()} [express-svc] trace_id=${tid} span_id=${sid} ${msg}`);
+}
+
 app.get('/execute', async (req, res) => {
   const span = api.trace.getSpan(api.context.active());
   if (span) {
     span.setAttribute('slo_tier', 'standard');
     span.setAttribute('service.version', '1.0.0');
   }
+  logWithTrace('Processing execute request');
 
   const result = await new Promise((resolve, reject) => {
     http.get(`${GOWORKER_URL}/work`, (resp) => {
@@ -55,6 +64,7 @@ app.get('/execute', async (req, res) => {
     span.setAttribute('goworker.status', result.status);
     span.addEvent('goworker_response_received', { status: result.status });
   }
+  logWithTrace(`GoWorker response received: ${result.status}`);
 
   res.json({ service: 'express-svc', goworker_result: result });
 });

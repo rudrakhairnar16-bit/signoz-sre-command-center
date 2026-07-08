@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var tracer = otel.Tracer("goworker-svc")
@@ -46,12 +48,23 @@ func initTracer() {
 	))
 }
 
+func logWithTrace(ctx context.Context, msg string) {
+	span := oteltrace.SpanFromContext(ctx)
+	if span != nil && span.SpanContext().HasTraceID() {
+		tid := span.SpanContext().TraceID().String()
+		sid := span.SpanContext().SpanID().String()
+		log.Printf("trace_id=%s span_id=%s %s", tid, sid, msg)
+	} else {
+		log.Printf("trace_id= span_id= %s", msg)
+	}
+}
+
 func main() {
 	initTracer()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/work", func(w http.ResponseWriter, r *http.Request) {
-		_, span := tracer.Start(r.Context(), "do_work")
+		ctx, span := tracer.Start(r.Context(), "do_work")
 		span.SetAttributes(
 			attribute.String("slo_tier", "batch"),
 			attribute.String("service.version", "1.0.0"),
@@ -59,6 +72,7 @@ func main() {
 		)
 		defer span.End()
 
+		logWithTrace(ctx, "Starting work")
 		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
 
 		result := map[string]string{
@@ -68,6 +82,7 @@ func main() {
 		}
 		span.SetAttributes(attribute.String("result", "work_done"))
 		span.AddEvent("work_completed")
+		logWithTrace(ctx, fmt.Sprintf("Work completed: %s", result["status"]))
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)

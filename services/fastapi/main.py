@@ -10,8 +10,24 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
-logging.basicConfig(level=logging.INFO)
+class TraceIdFilter(logging.Filter):
+    def filter(self, record):
+        span = trace.get_current_span()
+        ctx = span.get_span_context() if span else None
+        if ctx and ctx.trace_id:
+            record.trace_id = format(ctx.trace_id, '032x')
+            record.span_id = format(ctx.span_id, '016x')
+        else:
+            record.trace_id = ''
+            record.span_id = ''
+        return True
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(name)s] trace_id=%(trace_id)s span_id=%(span_id)s %(message)s',
+)
 logger = logging.getLogger("fastapi-svc")
+logger.addFilter(TraceIdFilter())
 
 OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318/v1/traces")
 EXPRESS_URL = os.getenv("EXPRESS_URL", "http://express-svc:3000")
@@ -41,6 +57,7 @@ async def process():
 
         span.set_attribute("express.status", result.get("status", "unknown"))
         span.add_event("express_response_received", {"status": result.get("status", "unknown")})
+        logger.info("Express response received", extra={"express_status": result.get("status", "unknown")})
 
     return {"service": "fastapi-svc", "express_result": result}
 
