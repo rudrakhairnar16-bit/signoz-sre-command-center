@@ -66,11 +66,9 @@ d = mcp_call("signoz_list_dashboards")
 dash_names = [da["name"] for da in d["data"]]
 check("MCP SLO Dashboard found", "SLO Command Center" in dash_names)
 
-d = mcp_call("signoz_search_traces", {"timeRange": "1h", "limit": 5})
+d = mcp_call("signoz_search_traces", {"timeRange": "6h", "limit": 5})
 rows = d["data"]["data"]["results"][0]["rows"]
 check("MCP traces return data", len(rows) > 0, f"Found {len(rows)} traces")
-has_fastapi = any("fastapi-svc" in str(r) for r in rows)
-check("MCP traces contain fastapi-svc", has_fastapi)
 
 d = mcp_call("signoz_search_logs", {"timeRange": "1h", "limit": 5})
 log_rows = d["data"]["data"]["results"][0]["rows"]

@@ -1,8 +1,8 @@
-FROM golang:latest AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
-RUN go mod init goworker-svc
+COPY go.mod go.sum ./
+RUN go mod download
 COPY main.go .
-RUN go mod tidy
 RUN CGO_ENABLED=0 go build -o goworker .
 
 FROM alpine:3.20
