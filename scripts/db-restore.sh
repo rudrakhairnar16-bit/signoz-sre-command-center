@@ -11,6 +11,6 @@ if [ ! -f "$BACKUP_FILE" ]; then
     exit 1
 fi
 
-echo "Restoring SigNoz Postgres DB from ${BACKUP_FILE} ..."
-docker exec -i "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" < "$BACKUP_FILE"
+echo "Restoring SigNoz Postgres DB (${CONTAINER}) from ${BACKUP_FILE} ..."
+docker exec -i "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" < "$BACKUP_FILE" 2>&1
 echo "Restore complete!"

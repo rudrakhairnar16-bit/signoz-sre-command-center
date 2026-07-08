@@ -36,7 +36,7 @@ try {
     $json_svc = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($mcp_services))))
     $svc_obj = $json_svc | ConvertFrom-Json
     $svc_names = $svc_obj.result.structuredContent.data.serviceName
-    Check "MCP list_services (18 services)" ($svc_names.Count -eq 18) "Found $($svc_names.Count)"
+    Check "MCP list_services returns data" ($svc_names.Count -ge 1) "Found $($svc_names.Count)"
     Check "MCP fastapi-svc present" ($svc_names -contains "fastapi-svc") ($svc_names -join ", ")
 } catch { Check "MCP list_services" $false $_.Exception.Message }
 

@@ -1,8 +1,8 @@
 param(
-    [string]$OutputDir = ".\backups"
+    [string]$OutputDir = ".\backups",
+    [string]$ContainerName = "signoz-metastore-postgres-0"
 )
 
-$container = "signoz-metastore-postgres-0"
 $dbUser = "signoz"
 $dbName = "signoz"
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -13,8 +13,8 @@ if (-not (Test-Path $OutputDir)) {
     Write-Host "Created backup directory: $OutputDir" -ForegroundColor Yellow
 }
 
-Write-Host "Backing up SigNoz Postgres DB to $backupFile ..." -ForegroundColor Cyan
-docker exec $container pg_dump -U $dbUser -d $dbName --clean --if-exists > $backupFile 2>$null
+Write-Host "Backing up SigNoz Postgres DB ($ContainerName) to $backupFile ..." -ForegroundColor Cyan
+docker exec $ContainerName pg_dump -U $dbUser -d $dbName --clean --if-exists > $backupFile 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Backup complete: $backupFile ($((Get-Item $backupFile).Length/1KB -as [int]) KB)" -ForegroundColor Green
 } else {
