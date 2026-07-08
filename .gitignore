@@ -7,3 +7,4 @@ node_modules/
 casting.yaml.lock
 *.log
 .DS_Store
+backups/

@@ -1,0 +1,251 @@
+{
+  "title": "Service Health",
+  "description": "Per-service health metrics: p99 latency, error rate, request rate for all instrumented services.",
+  "tags": ["health", "latency", "error-rate", "throughput"],
+  "uploadedGrafana": false,
+  "version": "v5",
+  "collapsable_rows_migrated": true,
+  "uuid": "f1a2b3c4-d5e6-7890-abcd-ef1234567890",
+  "layout": [
+    { "h": 1, "i": "row-overview", "maxH": 1, "minH": 1, "minW": 12, "moved": false, "static": false, "w": 12, "x": 0, "y": 0 },
+    { "h": 3, "i": "w-latency", "moved": false, "static": false, "w": 4, "x": 0, "y": 1 },
+    { "h": 3, "i": "w-error-rate", "moved": false, "static": false, "w": 4, "x": 4, "y": 1 },
+    { "h": 3, "i": "w-request-rate", "moved": false, "static": false, "w": 4, "x": 8, "y": 1 },
+    { "h": 3, "i": "w-p99-timeseries", "moved": false, "static": false, "w": 6, "x": 0, "y": 4 },
+    { "h": 3, "i": "w-error-timeseries", "moved": false, "static": false, "w": 6, "x": 6, "y": 4 }
+  ],
+  "panelMap": {
+    "row-overview": {
+      "collapsed": false,
+      "widgets": [
+        { "h": 3, "i": "w-latency", "moved": false, "static": false, "w": 4, "x": 0, "y": 1 },
+        { "h": 3, "i": "w-error-rate", "moved": false, "static": false, "w": 4, "x": 4, "y": 1 },
+        { "h": 3, "i": "w-request-rate", "moved": false, "static": false, "w": 4, "x": 8, "y": 1 }
+      ]
+    }
+  },
+  "variables": {},
+  "widgets": [
+    { "description": "", "id": "row-overview", "panelTypes": "row", "title": "Overview" },
+    {
+      "description": "P99 latency in milliseconds across all services",
+      "id": "w-latency",
+      "panelTypes": "value",
+      "title": "P99 Latency",
+      "yAxisUnit": "ms",
+      "softMax": 1000,
+      "softMin": 0,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "thresholds": [
+        { "key": "F1", "thresholdType": ">=", "thresholdValue": 500, "thresholdColor": "red" },
+        { "key": "F1", "thresholdType": "<", "thresholdValue": 500, "thresholdColor": "green" }
+      ],
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": false, "expression": "A",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "p99" }],
+              "filter": { "expression": "" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "disabled": false, "expression": "A/1000000000", "legend": "P99 (ms)", "queryName": "F1" }
+          ]
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-latency",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [
+        { "dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag" },
+        { "dataType": "float64", "id": "durationNano--float64--tag--true", "isColumn": true, "isJSON": false, "key": "durationNano", "type": "tag" }
+      ]
+    },
+    {
+      "description": "Error rate as percentage of total requests",
+      "id": "w-error-rate",
+      "panelTypes": "value",
+      "title": "Error Rate",
+      "yAxisUnit": "percent",
+      "softMax": 100,
+      "softMin": 0,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "thresholds": [
+        { "key": "F1", "thresholdType": ">=", "thresholdValue": 5, "thresholdColor": "red" },
+        { "key": "F1", "thresholdType": "<", "thresholdValue": 5, "thresholdColor": "green" }
+      ],
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": true, "expression": "A",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "has_error = true" }, "reduceTo": "avg"
+            },
+            {
+              "dataSource": "traces", "disabled": true, "expression": "B",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "B", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "disabled": false, "expression": "A/B*100", "legend": "Error Rate %", "queryName": "F1" }
+          ]
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-error-rate",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": []
+    },
+    {
+      "description": "Total request rate per second",
+      "id": "w-request-rate",
+      "panelTypes": "value",
+      "title": "Request Rate",
+      "yAxisUnit": "short",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": false, "expression": "A",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [],
+          "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+          "id": "q-request-rate",
+          "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+          "queryType": "builder"
+        }
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": []
+    },
+    {
+      "description": "P99 latency trend over time",
+      "id": "w-p99-timeseries",
+      "panelTypes": "graph",
+      "title": "P99 Latency (Time Series)",
+      "yAxisUnit": "ms",
+      "softMax": 1000,
+      "softMin": 0,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": false, "expression": "A",
+              "functions": [], "groupBy": [{ "key": "serviceName", "type": "tag", "dataType": "string" }],
+              "having": { "expression": "" }, "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "p99" }],
+              "filter": { "expression": "" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "disabled": false, "expression": "A/1000000000", "legend": "{{serviceName}}", "queryName": "F1" }
+          ]
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-p99-ts",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [
+        { "dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag" }
+      ]
+    },
+    {
+      "description": "Error count per service over time",
+      "id": "w-error-timeseries",
+      "panelTypes": "graph",
+      "title": "Error Count (Time Series)",
+      "yAxisUnit": "short",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": false, "expression": "A",
+              "functions": [], "groupBy": [{ "key": "serviceName", "type": "tag", "dataType": "string" }],
+              "having": { "expression": "" }, "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "has_error = true" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [],
+          "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+          "id": "q-error-ts",
+          "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+          "queryType": "builder"
+        }
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [
+        { "dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag" }
+      ]
+    }
+  ]
+}

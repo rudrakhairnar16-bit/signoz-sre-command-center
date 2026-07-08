@@ -1,0 +1,270 @@
+{
+  "title": "Error Budget Tracker",
+  "description": "Error budget burn rate, remaining budget, and SLO compliance over trailing windows.",
+  "tags": ["slo", "error-budget", "burn-rate", "compliance"],
+  "uploadedGrafana": false,
+  "version": "v5",
+  "collapsable_rows_migrated": true,
+  "uuid": "b2c3d4e5-f6a7-8901-bcde-234567890123",
+  "layout": [
+    { "h": 1, "i": "row-eb", "maxH": 1, "minH": 1, "minW": 12, "moved": false, "static": false, "w": 12, "x": 0, "y": 0 },
+    { "h": 3, "i": "w-remaining", "moved": false, "static": false, "w": 4, "x": 0, "y": 1 },
+    { "h": 3, "i": "w-burn-rate", "moved": false, "static": false, "w": 4, "x": 4, "y": 1 },
+    { "h": 3, "i": "w-slo-compliance", "moved": false, "static": false, "w": 4, "x": 8, "y": 1 },
+    { "h": 3, "i": "w-availability-ts", "moved": false, "static": false, "w": 6, "x": 0, "y": 4 },
+    { "h": 3, "i": "w-burn-ts", "moved": false, "static": false, "w": 6, "x": 6, "y": 4 }
+  ],
+  "panelMap": {
+    "row-eb": {
+      "collapsed": false,
+      "widgets": [
+        { "h": 3, "i": "w-remaining", "moved": false, "static": false, "w": 4, "x": 0, "y": 1 },
+        { "h": 3, "i": "w-burn-rate", "moved": false, "static": false, "w": 4, "x": 4, "y": 1 },
+        { "h": 3, "i": "w-slo-compliance", "moved": false, "static": false, "w": 4, "x": 8, "y": 1 }
+      ]
+    }
+  },
+  "variables": {},
+  "widgets": [
+    { "description": "", "id": "row-eb", "panelTypes": "row", "title": "Error Budget" },
+    {
+      "description": "Remaining error budget (100% - current error rate). Negative means SLO breach.",
+      "id": "w-remaining",
+      "panelTypes": "value",
+      "title": "Remaining Budget",
+      "yAxisUnit": "percent",
+      "softMax": 100,
+      "softMin": -10,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "thresholds": [
+        { "key": "F1", "thresholdType": ">=", "thresholdValue": 0, "thresholdColor": "green" },
+        { "key": "F1", "thresholdType": "<", "thresholdValue": 0, "thresholdColor": "red" }
+      ],
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": true, "expression": "A",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "has_error = true" }, "reduceTo": "avg"
+            },
+            {
+              "dataSource": "traces", "disabled": true, "expression": "B",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "B", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "disabled": false, "expression": "100 - (A/B*100)", "legend": "Remaining %", "queryName": "F1" }
+          ]
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-remaining",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": []
+    },
+    {
+      "description": "Error budget burn rate (errors per second / total allowed errors per second)",
+      "id": "w-burn-rate",
+      "panelTypes": "value",
+      "title": "Burn Rate",
+      "yAxisUnit": "short",
+      "softMax": 10,
+      "softMin": 0,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "thresholds": [
+        { "key": "A", "thresholdType": ">=", "thresholdValue": 1, "thresholdColor": "red" },
+        { "key": "A", "thresholdType": "<", "thresholdValue": 1, "thresholdColor": "green" }
+      ],
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": false, "expression": "A",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "has_error = true" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": []
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-burn-rate",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": []
+    },
+    {
+      "description": "SLO compliance percentage over the selected time window",
+      "id": "w-slo-compliance",
+      "panelTypes": "value",
+      "title": "SLO Compliance",
+      "yAxisUnit": "percent",
+      "softMax": 100,
+      "softMin": 0,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "thresholds": [
+        { "key": "F1", "thresholdType": ">=", "thresholdValue": 99.5, "thresholdColor": "green" },
+        { "key": "F1", "thresholdType": "<", "thresholdValue": 99.5, "thresholdColor": "red" }
+      ],
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": true, "expression": "A",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "has_error = false" }, "reduceTo": "avg"
+            },
+            {
+              "dataSource": "traces", "disabled": true, "expression": "B",
+              "functions": [], "groupBy": [], "having": { "expression": "" },
+              "legend": "", "limit": null, "orderBy": [],
+              "queryName": "B", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "disabled": false, "expression": "A/B*100", "legend": "Compliance %", "queryName": "F1" }
+          ]
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-compliance",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": []
+    },
+    {
+      "description": "Availability trend over time per service",
+      "id": "w-availability-ts",
+      "panelTypes": "graph",
+      "title": "Availability (Time Series)",
+      "yAxisUnit": "percent",
+      "softMax": 100,
+      "softMin": 90,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": true, "expression": "A",
+              "functions": [], "groupBy": [{ "key": "serviceName", "type": "tag", "dataType": "string" }],
+              "having": { "expression": "" }, "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "has_error = false" }, "reduceTo": "avg"
+            },
+            {
+              "dataSource": "traces", "disabled": true, "expression": "B",
+              "functions": [], "groupBy": [{ "key": "serviceName", "type": "tag", "dataType": "string" }],
+              "having": { "expression": "" }, "legend": "", "limit": null, "orderBy": [],
+              "queryName": "B", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "disabled": false, "expression": "A/B*100", "legend": "{{serviceName}}", "queryName": "F1" }
+          ]
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-avail-ts",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [
+        { "dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag" }
+      ]
+    },
+    {
+      "description": "Error budget burn rate trend over time",
+      "id": "w-burn-ts",
+      "panelTypes": "graph",
+      "title": "Error Count (Time Series)",
+      "yAxisUnit": "short",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 30,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces", "disabled": false, "expression": "A",
+              "functions": [], "groupBy": [{ "key": "serviceName", "type": "tag", "dataType": "string" }],
+              "having": { "expression": "" }, "legend": "", "limit": null, "orderBy": [],
+              "queryName": "A", "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "has_error = true" }, "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [],
+          "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+          "id": "q-burn-ts",
+          "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+          "queryType": "builder"
+        }
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [
+        { "dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag" }
+      ]
+    }
+  ]
+}

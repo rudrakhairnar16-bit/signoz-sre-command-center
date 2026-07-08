@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --quiet --upgrade pip
+          for f in ai-agent/requirements.txt services/fastapi/requirements.txt auto-remediation/requirements.txt; do
+            [ -f "$f" ] && pip install -r "$f"
+          done
+
+      - name: Check Python syntax
+        run: |
+          find . -name '*.py' -exec python -m py_compile {} \;
+
+      - name: Check Dockerfiles exist
+        run: |
+          for f in services/fastapi/Dockerfile services/express/Dockerfile services/goworker/Dockerfile; do
+            [ -f "$f" ] && echo "OK $f" || { echo "Missing $f"; exit 1; }
+          done
+
+  build:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build custom service images
+        run: |
+          docker compose -f services/docker-compose.yaml build
