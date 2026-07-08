@@ -1,6 +1,5 @@
-from typing import Optional
 from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from mcp_tool import query_signoz
 
@@ -10,11 +9,10 @@ def signoz_mcp(query: str) -> str:
     return query_signoz(query)
 
 
-def create_agent(openai_api_key: str, model: str = "gpt-4o-mini"):
-    llm = ChatOpenAI(
+def create_agent(model: str = "llama3.2:3b"):
+    llm = ChatOllama(
         model=model,
-        temperature=0,
-        api_key=openai_api_key
+        temperature=0
     )
     tools = [signoz_mcp]
     agent = create_react_agent(llm, tools)
