@@ -31,6 +31,7 @@ services:
     - MCP_SERVER_PORT=8000
     - SIGNOZ_URL=http://signoz-signoz-0:8080
     - TRANSPORT_MODE=http
+    - SIGNOZ_API_KEY=dbe4dc0e-69a7-4245-81cc-37ad39178e04
     healthcheck:
       interval: 30s
       retries: 3
