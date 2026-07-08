@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from typing import Optional
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
@@ -73,7 +75,7 @@ def _get_llm():
         if not api_key:
             raise ValueError("GROQ_API_KEY is required for Groq provider")
         return ChatGroq(
-            model=model or "mixtral-8x7b-32768",
+            model=model or "llama-3.3-70b-versatile",
             temperature=temperature,
             api_key=api_key,
         )
