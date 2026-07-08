@@ -9,3 +9,7 @@ spec:
   mcp:
     spec:
       enabled: true
+  ingester:
+    spec:
+      opamp:
+        enabled: false
