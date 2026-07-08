@@ -76,62 +76,225 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full diagram.
 - **Failure Simulator**: Flood or stop a service to demonstrate the recovery loop
 - **Flow**: Alert → Webhook → `docker compose restart` → Verified recovery
 
-## Quick Start
+## Setup Guide
+
+A complete zero-to-running guide. Estimated time: **30–45 min**.
 
 ### Prerequisites
-- Docker Desktop 29+
-- Foundry CLI (`foundryctl.exe`)
-- Ollama (with llama3.2:3b pulled)
-- Python 3.12+ virtual environment in `ai-agent/venv/` (run `python -m venv ai-agent/venv && ai-agent/venv/bin/pip install -r ai-agent/requirements.txt`)
 
-### 1. Deploy SigNoz
+| Tool | Version | Check command | Install link |
+|------|---------|---------------|--------------|
+| Docker Desktop | 29+ | `docker --version` | [docker.com](https://www.docker.com/products/docker-desktop/) |
+| Foundry CLI | ≥0.2 | `foundryctl version` | [github.com/SigNoz/foundry](https://github.com/SigNoz/foundry) |
+| Ollama | ≥0.31 | `ollama --version` | [ollama.com](https://ollama.com/download) |
+| Python | 3.12+ | `python --version` | [python.org](https://www.python.org/downloads/) |
+| Git | any | `git --version` | [git-scm.com](https://git-scm.com/downloads) |
+
+### Step 1 — Clone the Repository
+
+```bash
+git clone https://github.com/rudrakhairnar16-bit/signoz-sre-command-center.git
+cd signoz-sre-command-center
+```
+
+### Step 2 — Deploy SigNoz (via Foundry)
+
 ```bash
 foundry deploy
 ```
 
-### 2. Create Network & Start Custom Services
+This starts: SigNoz UI, ClickHouse, PostgreSQL, OTel Collector, MCP Server, Alert Manager.  
+Wait until all containers are healthy (`docker ps` shows `healthy` for `signoz-signoz-0`).
+
+**Verify:** Open http://localhost:8080 — you should see the SigNoz login page.  
+Login: `admin@signoz.io` / `Admin@12345!`
+
+> **Note:** Foundry pulls images and provisions containers. First run takes 5–10 min.  
+> If port 8080 is already in use, edit `pours/deployment/compose.yaml` and change the port mapping.
+
+### Step 3 — Pull the Local LLM (Ollama)
+
+```bash
+ollama pull llama3.2:3b
+```
+
+This downloads a 2 GB model. The AI agent uses it locally — **no API key or cloud credits needed**.
+
+**Verify:** `ollama list` should show `llama3.2:3b`.
+
+### Step 4 — Create the Docker Network
+
+The custom services and SigNoz must be on the same Docker network.
+
 ```bash
 docker network create signoz-network 2>/dev/null || true
+```
+
+### Step 5 — Set Up Python Virtual Environment
+
+```bash
+python -m venv ai-agent/venv
+```
+
+**Windows:**
+```bash
+ai-agent\venv\Scripts\pip install -r ai-agent\requirements.txt
+```
+
+**macOS / Linux:**
+```bash
+ai-agent/venv/bin/pip install -r ai-agent/requirements.txt
+```
+
+This installs: LangChain, LangGraph, Ollama Python client, Streamlit, Flask, httpx, etc.
+
+### Step 6 — Build & Start Custom Services
+
+Three instrumented microservices that form a request chain:  
+`FastAPI (Python) → Express (Node.js) → GoWorker (Go)`
+
+```bash
 cd services
-docker compose up -d
+docker compose up -d --build
+cd ..
 ```
 
-### 3. Start AI Agent
+**Verify all 3 are running:**
 ```bash
+docker ps --filter "name=(fastapi|express|goworker)" --format "table {{.Names}}\t{{.Status}}"
+```
+
+**Test the request chain:**
+```bash
+curl http://localhost:8001/process
+```
+
+Expected response:
+```json
+{"service":"fastapi-svc","express_result":{"service":"express-svc","goworker_result":{"result":"work_done","service":"goworker-svc","status":"completed"}}}
+```
+
+### Step 7 — Verify Observability Data in SigNoz
+
+1. Open http://localhost:8080
+2. Go to **Services** tab → you should see at least 3 + otel-demo-lite services
+3. Go to **Traces** tab → filter by `fastapi-svc` → traces should appear (may take 30s)
+4. Go to **Dashboards** → **SLO Command Center** → all 7 panels rendering
+
+> **No services visible?** Hit the endpoint a few times: `for i in 1 2 3 4 5; do curl -s http://localhost:8001/process > /dev/null; done`. Then refresh SigNoz.
+
+### Step 8 — Inject the Dashboard & Alert Rules
+
+The SLO Command Center dashboard and 3 alert rules are stored in PostgreSQL.  
+Run the following to insert them (one-time):
+
+```bash
+# Windows (PowerShell):
+powershell -Command "& { ai-agent\venv\Scripts\python -c "from mcp_tool import query_signoz; print('Dashboard ready')" }"
+
+# Or import via SigNoz UI:
+# Dashboards → Import JSON → select dashboards/slo-command-center.json
+```
+
+> **Note:** The dashboard was pre-inserted during development. If you don't see it, import manually from `dashboards/slo-command-center.json` via the SigNoz UI.
+
+### Step 9 — Start the AI Agent
+
+```bash
+# Make sure Ollama is running (it usually starts as a background service)
+ollama serve &
+
+# Start the Streamlit app
 cd ai-agent
-# Windows: venv\Scripts\streamlit run app.py
-# POSIX:   venv/bin/streamlit run app.py
-# Open http://localhost:8501
 ```
 
-### 4. Start Remediation Webhook
+**Windows:**
 ```bash
-# Windows: ai-agent\venv\Scripts\python auto-remediation\webhook.py
-# POSIX:   ai-agent/venv/bin/python auto-remediation/webhook.py
+venv\Scripts\streamlit run app.py
 ```
 
-### 5. Run Demo
+**macOS / Linux:**
 ```bash
-# Flood a service + trigger auto-remediation:
-python auto-remediation/simulate-failure.py --mode flood --service fastapi-svc
+venv/bin/streamlit run app.py
+```
 
-# Or just test the webhook:
-python auto-remediation/simulate-failure.py --mode webhook-only
+Open http://localhost:8501 in your browser.
 
-# PowerShell demo (Windows):
+**Test it with:**
+- "What services are running?"
+- "Show me traces from the last hour"
+- "Restart fastapi-svc"
+
+### Step 10 — Start the Auto-Remediation Webhook
+
+Open a **second terminal** and run:
+
+```bash
+cd signoz-sre-command-center
+```
+
+**Windows:**
+```bash
+ai-agent\venv\Scripts\python auto-remediation\webhook.py
+```
+
+**macOS / Linux:**
+```bash
+ai-agent/venv/bin/python auto-remediation/webhook.py
+```
+
+**Verify:**
+```bash
+curl http://localhost:9000/health
+# → {"status":"ok","timestamp":"..."}
+```
+
+### Step 11 — Run the Demo
+
+**Option A — Webhook-only test:**
+```bash
+python auto-remediation/simulate-failure.py --mode webhook-only --service fastapi-svc
+# → Sends a fake alert → webhook restarts the container
+```
+
+**Option B — Full flood + recovery demo:**
+```bash
+python auto-remediation/simulate-failure.py --mode flood --service fastapi-svc --count 500
+# → floods the service with 500 requests → triggers webhook → container restarts
+```
+
+**Option C — One-click PowerShell demo (Windows):**
+```powershell
 powershell -ExecutionPolicy Bypass -File demo/demo.ps1
+```
+
+**Option D — Bash demo (WSL / Linux / macOS):**
+```bash
+bash demo/demo.sh
 ```
 
 ## Key URLs
 
-| Service | URL |
-|---------|-----|
-| SigNoz UI | http://localhost:8080 |
-| AI Agent | http://localhost:8501 |
-| Remediation Webhook | http://localhost:9000/health |
-| FastAPI Service | http://localhost:8001/process |
-| Express Service | http://localhost:3001/execute |
-| Go Worker | http://localhost:8081/work |
+| Service | URL | Purpose |
+|---------|-----|---------|
+| SigNoz UI | http://localhost:8080 | Dashboards, traces, logs, metrics |
+| AI Agent | http://localhost:8501 | Natural-language chat with SigNoz data |
+| Remediation Webhook | http://localhost:9000/health | Auto-recovery endpoint |
+| FastAPI Service | http://localhost:8001/process | Entry-point microservice |
+| Express Service | http://localhost:3001/execute | Middle microservice |
+| Go Worker | http://localhost:8081/work | Leaf microservice |
+
+## Troubleshooting
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| `network signoz-network not found` | Network not created | `docker network create signoz-network` |
+| Services won't start | Port conflict | Change port in `services/docker-compose.yaml` |
+| MCP returns 403 | API key missing | Set `SIGNOZ_API_KEY` in `pours/deployment/compose.yaml` |
+| Agent says "tool not found" | Ollama not running | Run `ollama serve` before starting agent |
+| `go mod tidy` fails | Go version too old | Update Dockerfile to `golang:latest` |
+| No traces in SigNoz | No traffic generated | `curl http://localhost:8001/process` a few times |
+| npm install fails | Wrong package versions | Run `npm install` in `services/express/` |
 
 ## Repository Structure
 
