@@ -1,6 +1,6 @@
+import os
 from typing import Optional
 from langchain_core.tools import tool
-from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from mcp_tool import (
     list_services as _list_services,
@@ -62,11 +62,71 @@ def signoz_remediate(service: str) -> str:
     return _remediate_service(service)
 
 
-def create_agent(model: str = "llama3.2:3b"):
-    llm = ChatOllama(
-        model=model,
-        temperature=0
-    )
+def _get_llm():
+    provider = os.environ.get("LLM_PROVIDER", "ollama").strip().lower()
+    model = os.environ.get("LLM_MODEL", "")
+    temperature = 0
+
+    if provider == "groq":
+        from langchain_groq import ChatGroq
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY is required for Groq provider")
+        return ChatGroq(
+            model=model or "mixtral-8x7b-32768",
+            temperature=temperature,
+            api_key=api_key,
+        )
+
+    elif provider == "gemini":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY is required for Gemini provider")
+        return ChatGoogleGenerativeAI(
+            model=model or "gemini-2.0-flash-lite",
+            temperature=temperature,
+            api_key=api_key,
+        )
+
+    elif provider == "claude":
+        from langchain_anthropic import ChatAnthropic
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY is required for Claude provider")
+        return ChatAnthropic(
+            model=model or "claude-3-haiku-20240307",
+            temperature=temperature,
+            api_key=api_key,
+        )
+
+    elif provider in ("openai-compatible", "deepseek"):
+        from langchain_openai import ChatOpenAI
+        api_key = os.environ.get("OPENAI_API_KEY")
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.deepseek.com")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY is required for OpenAI-compatible provider")
+        return ChatOpenAI(
+            model=model or "deepseek-chat",
+            temperature=temperature,
+            api_key=api_key,
+            base_url=base_url,
+        )
+
+    else:
+        from langchain_ollama import ChatOllama
+        return ChatOllama(
+            model=model or "llama3.2:3b",
+            temperature=temperature,
+        )
+
+
+def create_agent(model: str = ""):
+    if model:
+        os.environ.setdefault("LLM_MODEL", model)
+    llm = _get_llm()
+    provider = os.environ.get("LLM_PROVIDER", "ollama")
+    print(f"Agent initialized with provider: {provider}, model: {llm.model}")
     tools = [
         signoz_list_services,
         signoz_search_traces,

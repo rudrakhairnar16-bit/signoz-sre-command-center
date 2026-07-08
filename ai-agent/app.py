@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from agent import create_agent
 
@@ -10,12 +11,14 @@ st.set_page_config(
 st.title("SigNoz SRE Command Center - AI Agent")
 st.markdown("Ask natural language questions about your system's health, performance, and errors.")
 
+provider = os.environ.get("LLM_PROVIDER", "ollama")
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "agent" not in st.session_state:
-    st.session_state.agent = create_agent("llama3.2:3b")
-    st.sidebar.success("Agent ready (local LLM: llama3.2:3b)")
+    st.session_state.agent = create_agent()
+    st.sidebar.success(f"Agent ready (provider: {provider})")
 
 if st.sidebar.button("Clear conversation"):
     st.session_state.messages = []
