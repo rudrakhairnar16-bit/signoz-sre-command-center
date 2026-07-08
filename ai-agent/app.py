@@ -28,7 +28,7 @@ st.sidebar.markdown("- What are my p99 latencies?")
 st.sidebar.markdown("- List all active alerts")
 st.sidebar.markdown("- How do I create a dashboard?")
 st.sidebar.markdown("- Check logs for express-svc")
-st.sidebar.markdown("- What is error budget and how is it calculated?")
+st.sidebar.markdown("- Restart fastapi-svc (remediation)")
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):

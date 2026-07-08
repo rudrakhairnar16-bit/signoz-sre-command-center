@@ -4,6 +4,7 @@ from typing import Optional
 
 MCP_SERVER_URL = "http://localhost:8000/mcp"
 SIGNOZ_API_KEY = "dbe4dc0e-69a7-4245-81cc-37ad39178e04"
+REMEDIATION_URL = "http://localhost:9000/remediate"
 
 def _call_mcp(tool_name: str, arguments: dict = None) -> str:
     payload = {
@@ -57,6 +58,21 @@ def query_signoz(query: str) -> str:
         return _call_mcp("signoz_search_docs", {"searchText": query, "limit": 5})
     else:
         return _call_mcp("signoz_search_docs", {"searchText": query, "limit": 3})
+
+
+def remediate_service(service: str) -> str:
+    payload = {
+        "name": "agent-triggered-remediation",
+        "service": service,
+        "severity": "critical",
+        "source": "ai-agent",
+        "message": f"AI agent triggered remediation for {service}"
+    }
+    try:
+        resp = requests.post(REMEDIATION_URL, json=payload, timeout=15)
+        return resp.json().get("status", "unknown")
+    except Exception as e:
+        return f"failed: {str(e)}"
 
 
 def extract_service_name(query: str) -> Optional[str]:
