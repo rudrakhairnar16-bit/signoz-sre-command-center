@@ -349,8 +349,6 @@ bash demo/demo.sh
 ## Troubleshooting
 
 | Problem | Cause | Fix |
-|---------|-------|-----|
-| Problem | Cause | Fix |
 |---------|-------|------|
 | `network signoz-network not found` | Network not created | `docker network create signoz-network` |
 | Services won't start | Port conflict | Change port in `services/docker-compose.yaml` |
