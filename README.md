@@ -6,10 +6,6 @@
 
 **Full observability + AI analysis + automated recovery. All on SigNoz.**
 
-| Score | Potential Impact | Creativity | Technical | SigNoz Use | UX | Presentation |
-|-------|-----------------|------------|-----------|------------|----|-------------|
-| **54/60 (90%)** | 9/10 | 8/10 | 9/10 | 9/10 | 9/10 | 10/10 |
-
 ## Architecture
 
 ```
