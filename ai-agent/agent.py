@@ -13,6 +13,7 @@ from mcp_tool import (
     get_metrics as _get_metrics,
     search_docs as _search_docs,
     remediate_service as _remediate_service,
+    predict_slo as _predict_slo,
 )
 
 
@@ -62,6 +63,12 @@ def signoz_search_docs(query_text: str, limit: Optional[int] = None) -> str:
 def signoz_remediate(service: str) -> str:
     """Restart a failing service. Use this when a service has high error rates, is unhealthy, or needs recovery. Valid services: fastapi-svc, express-svc, goworker-svc."""
     return _remediate_service(service)
+
+
+@tool
+def signoz_predict_slo(service: Optional[str] = None) -> str:
+    """Predict SLO breach risk for a specific service or all services. Shows burn rate, remaining error budget, and estimated time to SLO exhaustion. SLO target is 99.5%."""
+    return _predict_slo(service or "")
 
 
 def _get_llm():
@@ -138,6 +145,7 @@ def create_agent(model: str = ""):
         signoz_get_metrics,
         signoz_search_docs,
         signoz_remediate,
+        signoz_predict_slo,
     ]
     agent = create_react_agent(llm, tools)
     return agent

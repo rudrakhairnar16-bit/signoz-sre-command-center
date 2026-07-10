@@ -74,6 +74,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full diagram.
 
 - **Webhook Receiver** (Flask, port 9000): Listens for alert webhooks, restarts failing containers
 - **AI-Integrated**: Agent can detect issues via MCP and trigger `signoz_remediate` tool
+- **Predictive SLO**: Agent can predict SLO breach risk with `signoz_predict_slo` — shows burn rate, remaining budget, and estimated exhaustion time
 - **Failure Simulator**: Flood or stop a service to demonstrate the recovery loop
 - **Flow**: Alert → Webhook → `docker compose restart` → Verified recovery
 

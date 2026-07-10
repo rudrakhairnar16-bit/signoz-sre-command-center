@@ -189,3 +189,49 @@ def remediate_service(service: str) -> str:
         return resp.json().get("status", "unknown")
     except Exception as e:
         return f"failed: {str(e)}"
+
+
+SLO_TARGET = float(os.getenv("SLO_TARGET", "99.5"))
+
+
+def predict_slo(service: str = "") -> str:
+    """Predict SLO breach risk for one or all services."""
+    raw = _call_mcp("signoz_list_services", {})
+    try:
+        import json
+        data = json.loads(raw).get("data", [])
+    except Exception:
+        return raw
+
+    allowed_error_rate = 100 - SLO_TARGET
+    lines = []
+
+    for svc in data:
+        name = svc["serviceName"]
+        if service and name != service:
+            continue
+        err_rate = svc.get("errorRate", 0)
+        calls = svc.get("numCalls", 0)
+
+        if err_rate <= 0:
+            lines.append(f"  - {name}: 0% errors — no SLO risk")
+            continue
+
+        burn_rate = err_rate / allowed_error_rate if allowed_error_rate > 0 else 999
+        hours_30d = 30 * 24
+        hours_to_exhaust = (allowed_error_rate / err_rate) * hours_30d if err_rate > 0 else 999
+
+        status = "🟢 HEALTHY" if burn_rate <= 1 else "🟡 AT RISK" if burn_rate <= 2 else "🔴 CRITICAL"
+        lines.append(
+            f"  - {name}: {err_rate:.1f}% errors, {burn_rate:.1f}x burn rate "
+            f"(SLO {SLO_TARGET}% → {allowed_error_rate:.1f}% allowed), "
+            f"exhaustion ≈ {hours_to_exhaust:.0f}h ({hours_to_exhaust/24:.1f}d), "
+            f"{calls} calls — {status}"
+        )
+
+    if not lines:
+        return f"No services found matching '{service}'."
+    header = f"SLO Prediction (target={SLO_TARGET}%, window=30d):"
+    if service:
+        header = f"SLO Prediction for '{service}' (target={SLO_TARGET}%):"
+    return header + "\n" + "\n".join(lines)
