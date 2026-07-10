@@ -36,16 +36,21 @@
 │  └──────────────────────────────────┼───────────┘                         │
 │                                     │                                      │
 │                                     ▼                                      │
-│  ┌──────────────────────────────────────────────────┐                     │
-│  │              Auto-Remediation                     │                     │
-│  │  ┌──────────────────┐    ┌────────────────────┐  │                     │
-│  │  │ Webhook Receiver │◀───│ AI Agent (LangGraph)│  │                     │
-│  │  │ (Flask :9000)    │    │ (Ollama + Streamlit)│  │                     │
-│  │  │                  │    │                     │  │                     │
-│  │  │ docker compose   │    │ MCP Tool → SigNoz   │  │                     │
-│  │  │ restart <svc>    │    │ for queries          │  │                     │
-│  │  └──────────────────┘    └────────────────────┘  │                     │
-│  └──────────────────────────────────────────────────┘                     │
+│  ┌──────────────────────────────────────────────────────┐                 │
+│  │              Auto-Remediation                         │                 │
+│  │  ┌──────────────────┐  ┌──────────────────────┐      │                 │
+│  │  │ Webhook Receiver │◀─│ AI Agent (LangGraph)  │      │                 │
+│  │  │ (Flask :9000)    │  │ (Ollama/Groq +        │      │                 │
+│  │  │                  │  │  Streamlit)            │      │                 │
+│  │  │ docker compose   │  │                       │      │                 │
+│  │  │ restart <svc>    │  │ MCP Tool → SigNoz     │      │                 │
+│  │  └────────┬─────────┘  └───────────────────────┘      │                 │
+│  │           ▲                                            │                 │
+│  │  ┌────────┴──────────┐                                │                 │
+│  │  │  Poller (sigNoz   │  ← polls error rates           │                 │
+│  │  │  API → webhook)   │    every 30s                   │                 │
+│  │  └───────────────────┘                                │                 │
+│  └──────────────────────────────────────────────────────┘                 │
 │                                                                             │
 │  ┌──────────────────────────────────────────────┐                         │
 │  │              otel-demo-lite                   │                         │
@@ -62,35 +67,55 @@
 ```
 Services → OTLP Exporter → OTel Collector → SigNoz (ClickHouse + Query Builder)
                                                         ↓
-                                              SLO Command Center Dashboard
+                                              Dashboards (3 JSON exports):
+                                                - SLO Command Center
+                                                - Service Health (p99, error rate)
+                                                - Error Budget Tracker
                                                         ↓
                                               3 Alert Rules (Warning, Critical, Burn Rate)
+                                                └── (pre-existing bug — alerts never fire)
 ```
 
-### 2. AI Agent Flow
+### 2. AI Agent Flow (multi-provider LLM)
 ```
 User → Streamlit UI (:8501) → LangGraph Agent
                                    │
-                          ┌────────┴────────┐
-                          ▼                  ▼
+                          ┌───────┴────────┐
+                          ▼                 ▼
                     MCP HTTP Query    Remediation Webhook
                     (:8000/mcp)       (:9000/remediate)
-                          │                  │
-                          ▼                  ▼
-                      SigNoz API       docker compose restart
+                          │                 │
+                          ▼                 ▼
+                      SigNoz API      docker compose restart
+
+LLM backends (configurable via .env):
+  - Ollama (local, default: llama3.2:3b)
+  - Groq (cloud, fast: llama-3.3-70b-versatile)
+  - Gemini / Claude / DeepSeek (optional)
 ```
 
-### 3. Auto-Remediation Flow (Alert → Recovery)
+### 3. Poller Flow (Alertmanager bypass)
 ```
-SigNoz Alert (Burn Rate > 2x)
-       │
+Poller (Py :9001) ← every 30s ← SigNoz API (service error rates)
+
+       │  error rate > threshold (e.g. 10%)
        ▼ POST /remediate
 Webhook Receiver (Flask :9000)
        │
-       ├─ Identify service from alert payload
        ├─ docker compose restart <service>
        ├─ Log remediation event to SigNoz
        └─ Return status
+```
+
+### 4. Auto-Remediation Flow (AI Agent triggered)
+```
+User → AI Agent "Restart express-svc"
+                    │
+                    ▼ signoz_remediate tool
+              Webhook Receiver (Flask :9000)
+                    │
+                    ├─ docker compose restart <service>
+                    └─ Return status
 ```
 
 ## Tech Stack
@@ -102,11 +127,14 @@ Webhook Receiver (Flask :9000)
 | Express Service | Node.js + OpenTelemetry | Custom instrumented service |
 | Go Worker | Go + OpenTelemetry | Custom instrumented service |
 | OTel Collector | OpenTelemetry Collector | Batch, enrich, route telemetry |
-| Dashboard | SigNoz Query Builder | SLO Command Center (7 panels) |
-| Alerts | SigNoz Alert Manager | 3-tier alerting |
-| AI Agent | LangGraph + Ollama | Natural language querying |
-| MCP | SigNoz MCP Server | Structured tool access to SigNoz |
+| Dashboards (3) | SigNoz Query Builder | SLO, Service Health, Error Budget |
+| Alerts | SigNoz Alert Manager | 3-tier alerting (pre-existing bug) |
+| Poller | Python + requests | Polls SigNoz API, triggers webhook |
+| AI Agent | LangGraph + Ollama/Groq | Natural language querying |
+| MCP | SigNoz MCP Server | 8 typed tools to query SigNoz |
 | Webhook | Python Flask | Auto-remediation handler |
+| CI | GitHub Actions | Lint + build on push/PR |
+| Backup | pg_dump scripts | PowerShell + Bash for DB backup/restore |
 | Demo Stack | opentelemetry-demo-lite | Supplementary telemetry |
 
 ## Port Mapping
