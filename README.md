@@ -105,6 +105,7 @@ Two more dashboard JSONs live in `dashboards/`:
 |-----------|------|---------|
 | Service Health | `dashboards/service-health.json` | Per-service p99 latency, error rate, request rate |
 | Error Budget Tracker | `dashboards/error-budget.json` | Remaining budget, burn rate, SLO compliance over time |
+| Cross-Signal Correlation | `dashboards/cross-signal.json` | P99 (traces) + error count (traces) + log errors (logs) — side by side |
 
 Import via SigNoz UI: **Dashboards → Import JSON**.
 
@@ -408,7 +409,8 @@ signoz-sre-command-center/
 ├── dashboards/               # Exported dashboard JSONs
 │   ├── slo-command-center.json
 │   ├── service-health.json   # Per-service health metrics
-│   └── error-budget.json     # Error budget tracker
+│   ├── error-budget.json     # Error budget tracker
+│   └── cross-signal.json     # Traces + logs correlation
 ├── alerts/                   # Alert rule documentation
 ├── opentelemetry-demo-lite/  # Supplementary demo services
 ├── ARCHITECTURE.md           # System architecture diagram

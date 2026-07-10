@@ -1,0 +1,207 @@
+{
+  "title": "Cross-Signal Correlation",
+  "description": "P99 latency, error rate, and log error count on one timeline — correlate traces, metrics, and logs for any service.",
+  "tags": ["cross-signal", "correlation", "traces", "logs", "latency", "error"],
+  "uploadedGrafana": false,
+  "version": "v5",
+  "collapsable_rows_migrated": true,
+  "uuid": "c4d5e6f7-8a9b-0123-4567-89abcdef012345",
+  "layout": [
+    { "h": 1, "i": "row-main", "maxH": 1, "minH": 1, "minW": 12, "moved": false, "static": false, "w": 12, "x": 0, "y": 0 },
+    { "h": 4, "i": "w-p99", "moved": false, "static": false, "w": 12, "x": 0, "y": 1 },
+    { "h": 4, "i": "w-errors", "moved": false, "static": false, "w": 12, "x": 0, "y": 5 },
+    { "h": 4, "i": "w-log-errors", "moved": false, "static": false, "w": 12, "x": 0, "y": 9 }
+  ],
+  "panelMap": {
+    "row-main": {
+      "collapsed": false,
+      "widgets": [
+        { "h": 4, "i": "w-p99", "moved": false, "static": false, "w": 12, "x": 0, "y": 1 },
+        { "h": 4, "i": "w-errors", "moved": false, "static": false, "w": 12, "x": 0, "y": 5 },
+        { "h": 4, "i": "w-log-errors", "moved": false, "static": false, "w": 12, "x": 0, "y": 9 }
+      ]
+    }
+  },
+  "variables": {
+    "dynamic": [
+      {
+        "name": "service",
+        "type": "QUERY",
+        "value": "",
+        "multi": false,
+        "sort": "DISABLED",
+        "query": {
+          "clickhouse_sql": [
+            {
+              "disabled": false,
+              "legend": "",
+              "name": "A",
+              "query": "SELECT DISTINCT serviceName FROM signoz_traces.distribution_operations WHERE serviceName != '' ORDER BY serviceName"
+            }
+          ],
+          "promql": [],
+          "queryType": "clickhouse_sql",
+          "builder": { "queryData": [], "queryFormulas": [] }
+        }
+      }
+    ]
+  },
+  "widgets": [
+    { "description": "", "id": "row-main", "panelTypes": "row", "title": "Cross-Signal Timeline" },
+    {
+      "description": "P99 latency in milliseconds — traces signal",
+      "id": "w-p99",
+      "panelTypes": "graph",
+      "title": "P99 Latency (Traces) — $service",
+      "yAxisUnit": "ms",
+      "softMax": 1000,
+      "softMin": 0,
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 60,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "thresholds": [
+        { "key": "F1", "thresholdType": ">=", "thresholdValue": 500, "thresholdColor": "red" },
+        { "key": "F1", "thresholdType": "<", "thresholdValue": 500, "thresholdColor": "green" }
+      ],
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "disabled": false,
+              "expression": "A",
+              "functions": [],
+              "groupBy": [],
+              "having": { "expression": "" },
+              "legend": "",
+              "limit": null,
+              "orderBy": [],
+              "queryName": "A",
+              "stepInterval": 60,
+              "aggregations": [{ "expression": "p99" }],
+              "filter": { "expression": "serviceName = \"{{service}}\"" },
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "disabled": false, "expression": "A/1000000000", "legend": "p99 (ms)", "queryName": "F1" }
+          ]
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-p99",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [
+        { "dataType": "float64", "id": "durationNano--float64--tag--true", "isColumn": true, "isJSON": false, "key": "durationNano", "type": "tag" }
+      ]
+    },
+    {
+      "description": "Error count from traces — traces signal",
+      "id": "w-errors",
+      "panelTypes": "graph",
+      "title": "Error Count (Traces) — $service",
+      "yAxisUnit": "short",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 60,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "thresholds": [
+        { "key": "A", "thresholdType": ">=", "thresholdValue": 10, "thresholdColor": "red" },
+        { "key": "A", "thresholdType": "<", "thresholdValue": 10, "thresholdColor": "green" }
+      ],
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "disabled": false,
+              "expression": "A",
+              "functions": [],
+              "groupBy": [],
+              "having": { "expression": "" },
+              "legend": "",
+              "limit": null,
+              "orderBy": [],
+              "queryName": "A",
+              "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "serviceName = \"{{service}}\" AND has_error = true" },
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [] 
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-errors",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": [
+        { "dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag" }
+      ]
+    },
+    {
+      "description": "Error-level log count — logs signal",
+      "id": "w-log-errors",
+      "panelTypes": "graph",
+      "title": "Log Error Count (Logs) — $service",
+      "yAxisUnit": "short",
+      "nullZeroValues": "zero",
+      "opacity": "1",
+      "isStacked": false,
+      "bucketCount": 60,
+      "bucketWidth": 0,
+      "fillSpans": false,
+      "mergeAllActiveQueries": false,
+      "thresholds": [
+        { "key": "A", "thresholdType": ">=", "thresholdValue": 10, "thresholdColor": "red" },
+        { "key": "A", "thresholdType": "<", "thresholdValue": 10, "thresholdColor": "green" }
+      ],
+      "columnUnits": {},
+      "timePreferance": "GLOBAL_TIME",
+      "query": {
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "logs",
+              "disabled": false,
+              "expression": "A",
+              "functions": [],
+              "groupBy": [],
+              "having": { "expression": "" },
+              "legend": "",
+              "limit": null,
+              "orderBy": [],
+              "queryName": "A",
+              "stepInterval": 60,
+              "aggregations": [{ "expression": "count()" }],
+              "filter": { "expression": "serviceName = \"{{service}}\" AND severityText = \"ERROR\"" },
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": []
+        },
+        "clickhouse_sql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "id": "q-log-errors",
+        "promql": [{ "disabled": false, "legend": "", "name": "A", "query": "" }],
+        "queryType": "builder"
+      },
+      "selectedLogFields": [],
+      "selectedTracesFields": []
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import json
 import time
 import logging
 import requests
+from collections import defaultdict
 from datetime import datetime, timezone
 
 logging.basicConfig(
@@ -21,7 +22,12 @@ THRESHOLD_ERROR_COUNT = int(os.getenv("POLLER_THRESHOLD_ERROR_COUNT", "20"))
 INTERVAL = int(os.getenv("POLLER_INTERVAL", "30"))
 COOLDOWN = int(os.getenv("POLLER_COOLDOWN", "300"))
 
+SLO_TARGET = float(os.getenv("SLO_TARGET", "99.5"))
+SLO_WINDOW_HOURS = int(os.getenv("SLO_WINDOW_HOURS", "24"))
+
 last_triggered = {}
+history = defaultdict(list)
+MAX_HISTORY = 2880
 
 
 def get_service_stats():
@@ -49,7 +55,47 @@ def get_service_stats():
     return data
 
 
-def trigger_remediation(service):
+def compute_burn_rate(svc_name):
+    samples = history.get(svc_name, [])
+    if len(samples) < 2:
+        return None, None, None
+
+    total_errors = 0
+    total_calls = 0
+    for s in samples:
+        total_errors += s["errors"]
+        total_calls += s["calls"]
+
+    if total_calls == 0:
+        return None, None, None
+
+    observed_error_rate = total_errors / total_calls * 100
+    allowed_error_rate = 100 - SLO_TARGET
+    budget_remaining_pct = max(0, allowed_error_rate - observed_error_rate)
+    budget_remaining_pct = (budget_remaining_pct / allowed_error_rate * 100) if allowed_error_rate > 0 else 0
+
+    oldest = samples[0]
+    newest = samples[-1]
+    elapsed_hours = (newest["ts"] - oldest["ts"]) / 3600
+    if elapsed_hours < 0.01:
+        return None, None, None
+
+    errors_per_hour = total_errors / elapsed_hours
+    allowed_errors_per_hour = (allowed_error_rate / 100) * (total_calls / elapsed_hours)
+    burn_rate = errors_per_hour / allowed_errors_per_hour if allowed_errors_per_hour > 0 else 999
+
+    if burn_rate > 0:
+        hours_to_exhaustion = budget_remaining_pct / (burn_rate * 100 / SLO_WINDOW_HOURS) if False else (
+            (total_calls * (allowed_error_rate / 100) - total_errors) / errors_per_hour
+        ) if errors_per_hour > 0 else 999
+        hours_to_exhaustion = max(0, hours_to_exhaustion)
+    else:
+        hours_to_exhaustion = 999
+
+    return burn_rate, budget_remaining_pct, hours_to_exhaustion
+
+
+def trigger_remediation(service, reason=""):
     now = time.time()
     if service in last_triggered and (now - last_triggered[service]) < COOLDOWN:
         remaining = int(COOLDOWN - (now - last_triggered[service]))
@@ -65,7 +111,8 @@ def trigger_remediation(service):
     payload = {
         "name": f"poller-auto-{service}",
         "service": service,
-        "source": "error-rate-poller",
+        "source": "slo-poller",
+        "reason": reason,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -75,7 +122,7 @@ def trigger_remediation(service):
         )
         if resp.ok:
             logger.info(
-                "Triggered remediation for %s: %s", service, resp.json()
+                "Remediated %s: %s", service, resp.json()
             )
             last_triggered[service] = now
         else:
@@ -105,37 +152,42 @@ def check_and_remediate():
         err_count = stats.get("numErrors", 0)
         total_calls = stats.get("numCalls", 0)
 
-        triggered = False
+        now = time.time()
+        history[svc_name].append({"ts": now, "errors": err_count, "calls": total_calls})
+        if len(history[svc_name]) > MAX_HISTORY:
+            history[svc_name].pop(0)
+
         reasons = []
 
+        # reactive trigger
         if err_rate >= THRESHOLD_ERROR_RATE:
-            reasons.append(
-                f"error rate {err_rate:.1f}% >= {THRESHOLD_ERROR_RATE}%"
-            )
+            reasons.append(f"error rate {err_rate:.1f}% >= {THRESHOLD_ERROR_RATE}%")
         if err_count >= THRESHOLD_ERROR_COUNT:
-            reasons.append(
-                f"error count {err_count} >= {THRESHOLD_ERROR_COUNT}"
-            )
+            reasons.append(f"error count {err_count} >= {THRESHOLD_ERROR_COUNT}")
+
+        # predictive SLO
+        burn_rate, budget_pct, hours_left = compute_burn_rate(svc_name)
+        pred = ""
+        if burn_rate is not None:
+            pred = f"burn={burn_rate:.1f}x, budget={budget_pct:.0f}% left, exhaustion={hours_left:.1f}h"
+            if hours_left < 2:
+                reasons.append(f"SLO exhaustion in {hours_left:.1f}h (burn rate {burn_rate:.1f}x)")
+            elif hours_left < 6:
+                logger.warning("%s SLO risk: %s", svc_name, pred)
 
         if reasons:
-            logger.warning(
-                "%s unhealthy: %s (calls=%d)", svc_name, "; ".join(reasons),
-                total_calls
-            )
-            trigger_remediation(svc_name)
+            logger.warning("%s unhealthy: %s", svc_name, "; ".join(reasons))
+            trigger_remediation(svc_name, "; ".join(reasons))
         else:
-            logger.debug(
-                "%s healthy (rate=%.1f%%, errors=%d, calls=%d)",
-                svc_name, err_rate, err_count, total_calls
-            )
+            logger.info("%s healthy — %s", svc_name, pred if burn_rate else "no data")
 
 
 def main():
     logger.info(
-        "Poller started: services=%s, rate>=%.0f%%, errors>=%d, "
-        "interval=%ds, cooldown=%ds",
+        "SLO Poller started: services=%s, rate>=%.0f%%, errors>=%d, "
+        "interval=%ds, cooldown=%ds, SLO=%.1f%%/%dh",
         SERVICES, THRESHOLD_ERROR_RATE, THRESHOLD_ERROR_COUNT,
-        INTERVAL, COOLDOWN,
+        INTERVAL, COOLDOWN, SLO_TARGET, SLO_WINDOW_HOURS,
     )
     while True:
         try:
