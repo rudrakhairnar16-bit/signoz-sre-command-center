@@ -33,6 +33,12 @@ jobs:
             [ -f "$f" ] && echo "OK $f" || { echo "Missing $f"; exit 1; }
           done
 
+      - name: Install YAML parser
+        run: pip install pyyaml
+
+      - name: Validate slo.yaml
+        run: python scripts/sync-slo.py
+
   build:
     needs: lint
     runs-on: ubuntu-latest

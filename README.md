@@ -85,6 +85,18 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full diagram.
 - Installs dependencies and builds Docker images
 - Ensures every commit passes basic quality gates
 
+### Bonus — SLO-as-Code (GitOps)
+
+Define SLO configs in `slo.yaml` and validate them:
+
+```bash
+python scripts/sync-slo.py              # validate only
+python scripts/sync-slo.py --apply      # sync to SigNoz (mock)
+python scripts/sync-slo.py --apply --dry-run  # preview changes
+```
+
+CI automatically validates `slo.yaml` on every push/PR. The file defines per-service SLO targets, alert thresholds, burn rate limits, and remediation actions.
+
 ### Bonus — Database Backup & Restore
 
 One-liner scripts to protect your SigNoz configuration:
@@ -337,7 +349,21 @@ powershell -ExecutionPolicy Bypass -File demo/demo.ps1
 bash demo/demo.sh
 ```
 
-### Step 14 — Auto-Poller (alternative to broken alertmanager)
+### Step 14 — SLO-Aware Canary Deployment
+
+Simulate a deploy and auto-rollback if error rate spikes:
+
+```bash
+python scripts/canary-deploy.py express-svc --version v2.1.0 --wait 60
+# → deploys (simulated), monitors 60s, rolls back on failure
+```
+
+List available services:
+```bash
+python scripts/canary-deploy.py --list
+```
+
+### Step 15 — Auto-Poller (alternative to broken alertmanager)
 
 The SigNoz alertmanager has a pre-existing bug (alerts never fire). The poller bypasses it by checking SigNoz API directly:
 
@@ -402,11 +428,14 @@ signoz-sre-command-center/
 │   ├── webhook.py            # Flask webhook (port 9000)
 │   ├── simulate-failure.py   # Traffic flood / service stop
 │   └── poller.py             # SigNoz API poller (alertmanager bypass)
+├── slo.yaml                  # SLO-as-Code config (GitOps)
 ├── scripts/                  # DB backup & restore scripts
 │   ├── db-backup.ps1         # PowerShell backup
 │   ├── db-restore.ps1        # PowerShell restore
 │   ├── db-backup.sh          # Bash backup
-│   └── db-restore.sh         # Bash restore
+│   ├── db-restore.sh         # Bash restore
+│   ├── sync-slo.py           # SLO config validator
+│   └── canary-deploy.py      # SLO-aware canary + rollback
 ├── dashboards/               # Exported dashboard JSONs
 │   ├── slo-command-center.json
 │   ├── service-health.json   # Per-service health metrics

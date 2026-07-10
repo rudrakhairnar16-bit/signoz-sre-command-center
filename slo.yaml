@@ -1,0 +1,40 @@
+# SLO-as-Code — define service level objectives for all services.
+# The sync-slo.py script reads this file and validates/pushes config to SigNoz.
+
+slo_target: 99.5          # percentage
+slo_window_days: 30
+error_budget_window: 24h   # rolling window for burn rate calculation
+
+services:
+  fastapi-svc:
+    description: "Python FastAPI entry-point service"
+    slo_target: 99.0
+    alert_thresholds:
+      error_rate_pct: 5
+      error_count: 50
+      burn_rate: 3         # trigger if burn rate > 3x for 10 min
+    remediation:
+      action: restart
+      cooldown_seconds: 300
+
+  express-svc:
+    description: "Node.js Express middleware service"
+    slo_target: 99.5
+    alert_thresholds:
+      error_rate_pct: 5
+      error_count: 30
+      burn_rate: 2
+    remediation:
+      action: restart
+      cooldown_seconds: 300
+
+  goworker-svc:
+    description: "Go worker leaf service"
+    slo_target: 99.5
+    alert_thresholds:
+      error_rate_pct: 5
+      error_count: 20
+      burn_rate: 2
+    remediation:
+      action: restart
+      cooldown_seconds: 300
