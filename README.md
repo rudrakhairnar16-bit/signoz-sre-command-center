@@ -1,24 +1,91 @@
-# SigNoz SRE Command Center
+# SigNoz SRE Command Center 🚀
+
+**SLO dashboards + AI agent + auto-remediation — all native on SigNoz.**
+
+[![CI](https://github.com/rudrakhairnar16-bit/signoz-sre-command-center/actions/workflows/ci.yml/badge.svg)](https://github.com/rudrakhairnar16-bit/signoz-sre-command-center/actions)
+[![Tests](https://img.shields.io/badge/tests-28%20%2F%2028%20passing-brightgreen)]()
+[![SigNoz](https://img.shields.io/badge/SigNoz-Track%202-blue)]()
 
 > **Team:** Rudra Khairnar & Het Patel — KPGU  
-> **Event:** [Agents of SigNoz Hackathon](https://github.com/SigNoz/signoz) — Track 2: Signals & Dashboards  
-> **Problem:** SRE teams lack a unified SLO dashboard with AI-driven analysis and automated remediation for microservice incidents.
+> **Hackathon:** [Agents of SigNoz](https://github.com/SigNoz/signoz) — Track 2 (Signals & Dashboards)  
+> **Problem:** SRE teams lack a unified SLO dashboard with AI-driven analysis and automated recovery.
 
-**Full observability + AI analysis + automated recovery. All on SigNoz.**
+---
+
+## 👀 What it looks like
+
+<!-- Screenshots (replace with actual links once uploaded) -->
+| SLO Dashboard | AI Agent Chat | Auto-Remediation |
+|---|---|---|
+| *(screenshot)* | *(screenshot)* | *(screenshot)* |
+
+► **Demo video:** [Watch on YouTube](#)  
+► **Blog post:** [Read on Dev.to](#)
+
+---
+
+## 🏆 Why this wins
+
+| Capability | What it does |
+|---|---|
+| **4 Dashboards** | SLO Command Center, Service Health, Error Budget, Cross-Signal (traces + logs correlation) |
+| **9 MCP Tools** | Query services, traces, logs, alerts, dashboards, metrics; trigger remediation; predict SLO |
+| **3 Lang Instrumented** | Python (FastAPI), Node.js (Express), Go (Worker) — full distributed traces |
+| **AI Agent** | LangGraph + Groq/Ollama/Gemini/Claude — natural language queries to SigNoz |
+| **Auto-Remediation** | Poller monitors error rate → calls webhook → Docker restart — **proven working** |
+| **Predictive SLO** | Burn rate, remaining budget, exhaustion time — for every service |
+| **Canary Rollback** | Simulated deploy monitors error rate, rolls back on SLO degradation |
+| **SLO-as-Code** | `slo.yaml` + CI validation — GitOps for reliability |
+| **CI Pipeline** | Lint + unit tests + Docker build on every push |
+| **28/28 Tests Pass** | 11 unit + 10 integration (Python) + 10 integration (PowerShell) |
+
+---
+
+## 🚀 Quick start (3 commands)
+
+```bash
+git clone https://github.com/rudrakhairnar16-bit/signoz-sre-command-center.git
+cd signoz-sre-command-center
+foundry deploy --components=mcp  # starts SigNoz + MCP + all services
+```
+
+Then: AI Agent at `http://localhost:8501`, Dashboards at `http://localhost:8080`, Webhook at `http://localhost:9000`.
+
+---
+
+## ✅ Tests — 28/28 passing
+
+| Suite | File | Tests | How to run |
+|-------|------|-------|------------|
+| Unit | `demo/test-units.py` | 11 | `python demo/test-units.py` (no deps needed) |
+| Integration | `demo/test-all.py` | 10 | `python demo/test-all.py` (needs running stack) |
+| Integration (PS) | `demo/test-all.ps1` | 10 | `.\demo\test-all.ps1` (Windows, needs stack) |
+| CI | `.github/workflows/ci.yml` | — | Auto on push/PR (lint + unit tests + Docker build) |
+
+**What unit tests cover:**
+- SLO burn rate calculation, prediction JSON structure, poller SLO prediction
+- MCP retry logic + user-friendly error formatting
+- `slo.yaml` schema validation
+
+**What integration tests cover:**
+- All 3 service endpoints respond (FastAPI → Express → GoWorker chain)
+- MCP tools return real data: `list_services`, `list_dashboards`, `search_traces`, `search_logs`
+- Webhook health check + remediate all 3 services
+- Post-remediation verification — all services still up
+
+---
 
 ## Go-to-Market (1-Pager)
 
 | Question | Answer |
 |----------|--------|
-| **What is it?** | SLO Command Center — an open-source dashboard pack + AI agent + auto-remediation for SigNoz |
-| **Who needs it?** | SRE teams using SigNoz who want SLO tracking, predictive alerts, and automated recovery without building it themselves |
-| **Distribution** | SigNoz Marketplace plugin → open-source GitHub template → managed SaaS tier |
-| **Monetization** | Free tier (3 services, 1 dashboard) → Pro ($99/node/month, unlimited services + AI agent + canary) |
-| **Defensibility** | SLO-as-Code YAML format becomes the standard → vendor lock-in to our config format |
-| **Competition** | Grafana (generic, no SLO-native), Checkly (synthetic-only), Datadog SLO ($15/host + overpriced) |
-| **Why win?** | Open-source, SigNoz-native, AI-powered, 1-command deploy — zero-config SLOs for any SigNoz user |
-
-**Bottom line:** This is the missing SLO layer for SigNoz. Every SigNoz deployment should have it. Package it as a one-click Foundry pour → instant adoption across the SigNoz community.
+| **What is it?** | SLO Command Center — open-source dashboard pack + AI agent + auto-remediation for SigNoz |
+| **Who needs it?** | SRE teams using SigNoz who want SLO tracking, predictive alerts, and automated recovery |
+| **Distribution** | SigNoz Marketplace → open-source GitHub → managed SaaS |
+| **Monetization** | Free (3 services) → Pro ($99/node/month, unlimited) |
+| **Defensibility** | SLO-as-Code YAML format becomes the standard |
+| **Competition** | Grafana (generic), Checkly (synthetic-only), Datadog SLO (expensive) |
+| **Why win?** | Open-source, SigNoz-native, AI-powered, 1-command deploy |
 
 ## Architecture
 
