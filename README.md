@@ -6,6 +6,20 @@
 
 **Full observability + AI analysis + automated recovery. All on SigNoz.**
 
+## Go-to-Market (1-Pager)
+
+| Question | Answer |
+|----------|--------|
+| **What is it?** | SLO Command Center — an open-source dashboard pack + AI agent + auto-remediation for SigNoz |
+| **Who needs it?** | SRE teams using SigNoz who want SLO tracking, predictive alerts, and automated recovery without building it themselves |
+| **Distribution** | SigNoz Marketplace plugin → open-source GitHub template → managed SaaS tier |
+| **Monetization** | Free tier (3 services, 1 dashboard) → Pro ($99/node/month, unlimited services + AI agent + canary) |
+| **Defensibility** | SLO-as-Code YAML format becomes the standard → vendor lock-in to our config format |
+| **Competition** | Grafana (generic, no SLO-native), Checkly (synthetic-only), Datadog SLO ($15/host + overpriced) |
+| **Why win?** | Open-source, SigNoz-native, AI-powered, 1-command deploy — zero-config SLOs for any SigNoz user |
+
+**Bottom line:** This is the missing SLO layer for SigNoz. Every SigNoz deployment should have it. Package it as a one-click Foundry pour → instant adoption across the SigNoz community.
+
 ## Architecture
 
 ```
