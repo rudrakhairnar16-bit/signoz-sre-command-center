@@ -7,29 +7,53 @@ SIGNOZ_API_KEY = os.getenv("SIGNOZ_API_KEY", "dbe4dc0e-69a7-4245-81cc-37ad39178e
 REMEDIATION_URL = os.getenv("REMEDIATION_URL", "http://localhost:9000/remediate")
 
 
-def _call_mcp(tool_name: str, arguments: dict = None) -> str:
-    payload = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": tool_name,
-            "arguments": arguments or {}
-        }
-    }
-    resp = requests.post(
-        MCP_SERVER_URL,
-        json=payload,
-        headers={"SIGNOZ-API-KEY": SIGNOZ_API_KEY},
-        timeout=30
-    )
-    resp.raise_for_status()
-    result = resp.json()
-    if "error" in result:
-        return f"Error: {result['error']}"
-    content = result.get("result", {}).get("content", [])
-    texts = [c.get("text", "") for c in content if c.get("type") == "text"]
-    return "\n".join(texts)
+def _call_mcp(tool_name: str, arguments: dict = None, retries: int = 2) -> str:
+    import time
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": tool_name,
+                    "arguments": arguments or {}
+                }
+            }
+            resp = requests.post(
+                MCP_SERVER_URL,
+                json=payload,
+                headers={"SIGNOZ-API-KEY": SIGNOZ_API_KEY},
+                timeout=30
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            if "error" in result:
+                return f"MCP error: {result['error'].get('message', result['error'])}"
+            content = result.get("result", {}).get("content", [])
+            texts = [c.get("text", "") for c in content if c.get("type") == "text"]
+            if not texts:
+                return "No data returned from MCP."
+            return "\n".join(texts)
+        except requests.exceptions.ConnectionError as e:
+            last_error = f"Cannot reach MCP server at {MCP_SERVER_URL}. Is SigNoz running?"
+            if attempt < retries:
+                time.sleep(2)
+                continue
+        except requests.exceptions.Timeout:
+            last_error = f"MCP server timed out (tool: {tool_name}). Try again later."
+            if attempt < retries:
+                time.sleep(2)
+                continue
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response is not None else "?"
+            last_error = f"MCP returned HTTP {status}. Check your SIGNOZ_API_KEY."
+            break
+        except Exception as e:
+            last_error = f"MCP call failed: {type(e).__name__}"
+            break
+    return f"Error: {last_error}"
 
 
 def _format_services(raw: str) -> str:

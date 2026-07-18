@@ -11,6 +11,17 @@ st.set_page_config(
 st.title("SigNoz SRE Command Center - AI Agent")
 st.markdown("Ask natural language questions about your system's health, performance, and errors.")
 
+st.markdown("""
+<style>
+    .stApp { background-color: #0e1117; color: #e0e0e0; }
+    .stChatMessage { background-color: #1a1d23; border-radius: 8px; padding: 12px; margin: 4px 0; }
+    .stSidebar { background-color: #161a22; }
+    .main-header { color: #00d4aa; font-size: 1.5rem; font-weight: 600; }
+    .status-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
+    .badge-green { background-color: #00d4aa22; color: #00d4aa; border: 1px solid #00d4aa44; }
+</style>
+""", unsafe_allow_html=True)
+
 provider = os.environ.get("LLM_PROVIDER", "ollama")
 
 if "messages" not in st.session_state:
@@ -54,7 +65,8 @@ if prompt := st.chat_input("Ask about your system..."):
                     )
                     response = result["messages"][-1].content
                 except Exception as e:
-                    response = f"Error: {str(e)}"
+                    err_msg = str(e) if "GROQ_API_KEY" in str(e) or "API_KEY" in str(e) else "Something went wrong. Check that SigNoz MCP is running and your API key is valid."
+                    response = f"⚠️ {err_msg}"
             st.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})

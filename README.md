@@ -404,6 +404,8 @@ It checks error rates every 30s and triggers the webhook if thresholds are excee
 | MCP returns 403 | API key missing | Set `SIGNOZ_API_KEY` in `pours/deployment/compose.yaml` |
 | Agent says "tool not found" | LLM not configured | Check `.env` — Ollama needs `ollama serve`, Groq needs valid `GROQ_API_KEY` |
 | Agent is very slow | Using local Ollama | Switch to Groq (free tier, 10× faster): set `LLM_PROVIDER=groq` + `GROQ_API_KEY` in `.env` |
+| Python traceback in Streamlit | MCP server unreachable | Ensure SigNoz is running: `docker ps \| grep signoz` |
+| Canary deploy fails | SigNoz MCP not responding | Check `docker ps` — MCP may still be starting up |
 | `go mod tidy` fails | Go version too old | Update Dockerfile to `golang:latest` |
 | No traces in SigNoz | No traffic generated | `curl http://localhost:8001/process` a few times |
 | npm install fails | Wrong package versions | Run `npm install` in `services/express/` |

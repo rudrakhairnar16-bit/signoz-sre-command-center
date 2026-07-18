@@ -84,11 +84,9 @@ def compute_burn_rate(svc_name):
     allowed_errors_per_hour = (allowed_error_rate / 100) * (total_calls / elapsed_hours)
     burn_rate = errors_per_hour / allowed_errors_per_hour if allowed_errors_per_hour > 0 else 999
 
-    if burn_rate > 0:
-        hours_to_exhaustion = budget_remaining_pct / (burn_rate * 100 / SLO_WINDOW_HOURS) if False else (
-            (total_calls * (allowed_error_rate / 100) - total_errors) / errors_per_hour
-        ) if errors_per_hour > 0 else 999
-        hours_to_exhaustion = max(0, hours_to_exhaustion)
+    if burn_rate > 0 and errors_per_hour > 0:
+        remaining_budget_errors = total_calls * (allowed_error_rate / 100) - total_errors
+        hours_to_exhaustion = max(0, remaining_budget_errors / errors_per_hour)
     else:
         hours_to_exhaustion = 999
 
