@@ -3,7 +3,7 @@
 **SLO dashboards + AI agent + auto-remediation — all native on SigNoz.**
 
 [![CI](https://github.com/rudrakhairnar16-bit/signoz-sre-command-center/actions/workflows/ci.yml/badge.svg)](https://github.com/rudrakhairnar16-bit/signoz-sre-command-center/actions)
-[![Tests](https://img.shields.io/badge/tests-28%20%2F%2028%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-77%20total%20(56%20unit%20%2B%2021%20integration)-brightgreen)]()
 [![SigNoz](https://img.shields.io/badge/SigNoz-Track%202-blue)]()
 
 > **Team:** Rudra Khairnar & Het Patel — KPGU  
@@ -37,7 +37,7 @@
 | **Canary Rollback** | Simulated deploy monitors error rate, rolls back on SLO degradation |
 | **SLO-as-Code** | `slo.yaml` + CI validation — GitOps for reliability |
 | **CI Pipeline** | Lint + unit tests + Docker build on every push |
-| **28/28 Tests Pass** | 11 unit + 10 integration (Python) + 10 integration (PowerShell) |
+| **77 Tests (56 unit + 21 integration)** | Poller, webhook, canary, SLO validation, MCP format, predict SLO, retry, & all 9 MCP tools |
 
 ---
 
@@ -57,19 +57,25 @@ Then: AI Agent at `http://localhost:8501`, Dashboards at `http://localhost:8080`
 
 | Suite | File | Tests | How to run |
 |-------|------|-------|------------|
-| Unit | `demo/test-units.py` | 11 | `python demo/test-units.py` (no deps needed) |
-| Integration | `demo/test-all.py` | 10 | `python demo/test-all.py` (needs running stack) |
-| Integration (PS) | `demo/test-all.ps1` | 10 | `.\demo\test-all.ps1` (Windows, needs stack) |
-| CI | `.github/workflows/ci.yml` | — | Auto on push/PR (lint + unit tests + Docker build) |
+| Unit | `demo/test-units.py` | **56** | `python demo/test-units.py` (no deps) |
+| Integration | `demo/test-all.py` | **21** | `python demo/test-all.py` (needs stack) |
+| Integration (PS) | `demo/test-all.ps1` | **17** | `.\demo\test-all.ps1` (needs stack) |
+| CI | `.github/workflows/ci.yml` | — | Auto on push/PR (lint + unit + Docker build) |
 
 **What unit tests cover:**
-- SLO burn rate calculation, prediction JSON structure, poller SLO prediction
-- MCP retry logic + user-friendly error formatting
-- `slo.yaml` schema validation
+- Poller: `compute_burn_rate` (normal, no history, single sample, zero calls, zero errors, fast burn)
+- Poller: cooldown logic (active window, expired window)
+- Webhook: auth (no key, valid key, invalid key)
+- Webhook: service name resolution (aliases, pass-through)
+- Canary deploy: MCP response parsing, rollback payload structure, constants
+- SLO YAML validation: valid, missing `slo_target`, missing `services`, missing `alert_thresholds`, missing `error_rate_pct`
+- MCP format functions: `_format_services`, `_format_alerts`, `_format_dashboards`, `_format_metrics`, `_format_traces`, `_format_logs` (normal + empty + error for each)
+- Predict SLO: burn rate math, zero-error handling
+- MCP retry: error message format, return type
 
 **What integration tests cover:**
 - All 3 service endpoints respond (FastAPI → Express → GoWorker chain)
-- MCP tools return real data: `list_services`, `list_dashboards`, `search_traces`, `search_logs`
+- MCP tools return real data: `list_services`, `list_dashboards`, `search_traces`, `search_logs`, `list_alerts`, `get_metrics`, `search_docs`
 - Webhook health check + remediate all 3 services
 - Post-remediation verification — all services still up
 

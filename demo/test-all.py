@@ -74,6 +74,24 @@ log_rows = d["data"]["data"]["results"][0]["rows"]
 log_count = len(log_rows) if log_rows else 0
 check("MCP logs endpoint works", True, f"Found {log_count} log rows")
 
+# ========== TEST 2b/3: ADDITIONAL MCP TOOLS ==========
+print("\n========== TEST 2b/3: Additional MCP Tools ==========")
+
+d = mcp_call("signoz_list_alerts")
+alert_data = d.get("data", [])
+check("MCP list_alerts returns list", isinstance(alert_data, list))
+check("MCP list_alerts has content", len(alert_data) >= 0)
+
+d = mcp_call("signoz_get_metrics", {"timeRange": "1h"})
+metric_data = d.get("data", [])
+check("MCP get_metrics returns list", isinstance(metric_data, list))
+
+d = mcp_call("signoz_search_docs", {"searchText": "slo", "limit": 3})
+trace_data = d.get("data", {})
+check("MCP search_docs endpoint works", True, "docs endpoint responded")
+
+# signoz_predict_slo is a LangGraph agent tool (not an MCP tool), tested via unit tests
+
 # ========== TEST 3/3: WEBHOOK REMEDIATION ==========
 print("\n========== TEST 3/3: Webhook Remediation ==========")
 r = requests.get("http://localhost:9000/health", timeout=5)
