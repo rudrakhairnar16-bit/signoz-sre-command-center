@@ -20,9 +20,6 @@
 |---|---|---|
 | *(screenshot)* | *(screenshot)* | *(screenshot)* |
 
-► **Demo video:** [Watch on YouTube](#)  
-► **Blog post:** [Read on Dev.to](#)
-
 ---
 
 ## 🏆 Why this wins
