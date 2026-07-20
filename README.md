@@ -2,9 +2,9 @@
 
 **SLO dashboards + AI agent + auto-remediation — all native on SigNoz.**
 
-[![CI](https://github.com/rudrakhairnar16-bit/signoz-sre-command-center/actions/workflows/ci.yml/badge.svg)](https://github.com/rudrakhairnar16-bit/signoz-sre-command-center/actions)
-[![Tests](https://img.shields.io/badge/tests-77%20total%20%2856%20unit%20%2B%2021%20integration%29-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-76%20total%20%2856%20unit%20%2B%2020%20integration%29-brightgreen)]()
 [![Unit Tests](https://img.shields.io/badge/unit%20tests-56%20%2F%2056%20passing-brightgreen)]()
+[![Integration Tests](https://img.shields.io/badge/integration%20tests-20%20%2F%2020%20passing-brightgreen)]()
 [![SigNoz](https://img.shields.io/badge/SigNoz-Track%202-blue)]()
 
 > **Team:** Rudra Khairnar & Het Patel — KPGU  
@@ -35,7 +35,7 @@
 | **Canary Rollback** | Simulated deploy monitors error rate, rolls back on SLO degradation |
 | **SLO-as-Code** | `slo.yaml` + CI validation — GitOps for reliability |
 | **CI Pipeline** | Lint + unit tests + Docker build on every push |
-| **77 Tests (56 unit + 21 integration)** | Poller, webhook, canary, SLO validation, MCP format, predict SLO, retry, & all 9 MCP tools |
+| **76 Tests (56 unit + 20 integration)** | Poller, webhook, canary, SLO validation, MCP format, predict SLO, retry, & all 9 MCP tools |
 
 ---
 
@@ -56,8 +56,8 @@ Then: AI Agent at `http://localhost:8501`, Dashboards at `http://localhost:8080`
 | Suite | File | Tests | How to run |
 |-------|------|-------|------------|
 | Unit | `demo/test-units.py` | **56** | `python demo/test-units.py` (no deps) |
-| Integration | `demo/test-all.py` | **21** | `python demo/test-all.py` (needs stack) |
-| Integration | `demo/test-all.sh` | **21** | `bash demo/test-all.sh` (Linux/macOS, needs stack) |
+| Integration | `demo/test-all.py` | **20** | `python demo/test-all.py` (needs stack) |
+| Integration | `demo/test-all.sh` | **20** | `bash demo/test-all.sh` (Linux/macOS, needs stack) |
 | Integration (PS) | `demo/test-all.ps1` | **17** | `.\demo\test-all.ps1` (Windows, needs stack) |
 | CI | `.github/workflows/ci.yml` | — | Auto on push/PR (lint + unit + Docker build) |
 
