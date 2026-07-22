@@ -1,9 +1,9 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()
-from typing import Optional
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+from typing import Optional, Any
 from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
 from mcp_tool import (
     list_services as _list_services,
     search_traces as _search_traces,
@@ -19,25 +19,25 @@ from mcp_tool import (
 
 @tool
 def signoz_list_services(time_range: Optional[str] = None, limit: Optional[int] = None) -> str:
-    """List all services monitored by SigNoz with their call rates, error rates, and latencies. Use time_range like '1h', '6h', '24h'."""
+    """List all services monitored by SigNoz with their call rates, error rates, and latencies."""
     return _list_services(time_range or "1h", limit or 50)
 
 
 @tool
 def signoz_search_traces(service_name: Optional[str] = None, time_range: Optional[str] = None, limit: Optional[int] = None) -> str:
-    """Search traces in SigNoz. Optionally filter by service name. Use time_range like '1h', '6h', '24h'."""
+    """Search traces in SigNoz. Optionally filter by service name."""
     return _search_traces(service_name or "", time_range or "1h", limit or 10)
 
 
 @tool
 def signoz_search_logs(service_name: Optional[str] = None, time_range: Optional[str] = None, severity: Optional[str] = None, limit: Optional[int] = None) -> str:
-    """Search logs in SigNoz. Optionally filter by service name and severity (e.g., ERROR, WARN, INFO). Use time_range like '1h', '6h', '24h'."""
+    """Search logs in SigNoz. Optionally filter by service name and severity."""
     return _search_logs(service_name or "", time_range or "1h", severity or "", limit or 10)
 
 
 @tool
 def signoz_list_alerts() -> str:
-    """List all configured alert rules in SigNoz with their severity and status."""
+    """List all configured alert rules in SigNoz."""
     return _list_alerts()
 
 
@@ -49,26 +49,73 @@ def signoz_list_dashboards() -> str:
 
 @tool
 def signoz_get_metrics(time_range: Optional[str] = None) -> str:
-    """Get metrics from SigNoz including latency, P99, and request rates. Use time_range like '1h', '6h', '24h'."""
+    """Get metrics from SigNoz including latency, P99, and request rates."""
     return _get_metrics(time_range or "1h")
 
 
 @tool
 def signoz_search_docs(query_text: str, limit: Optional[int] = None) -> str:
-    """Search SigNoz documentation for how-to guides, troubleshooting, and feature explanations."""
+    """Search SigNoz documentation for how-to guides and troubleshooting."""
     return _search_docs(query_text, limit or 5)
 
 
 @tool
 def signoz_remediate(service: str) -> str:
-    """Restart a failing service. Use this when a service has high error rates, is unhealthy, or needs recovery. Valid services: fastapi-svc, express-svc, goworker-svc."""
+    """Restart a failing service. Valid: fastapi-svc, express-svc, goworker-svc."""
     return _remediate_service(service)
 
 
 @tool
 def signoz_predict_slo(service: Optional[str] = None) -> str:
-    """Predict SLO breach risk for a specific service or all services. Shows burn rate, remaining error budget, and estimated time to SLO exhaustion. SLO target is 99.5%."""
+    """Predict SLO breach risk for a specific service or all services."""
     return _predict_slo(service or "")
+
+
+TOOLS = [
+    signoz_list_services,
+    signoz_search_traces,
+    signoz_search_logs,
+    signoz_list_alerts,
+    signoz_list_dashboards,
+    signoz_get_metrics,
+    signoz_search_docs,
+    signoz_remediate,
+    signoz_predict_slo,
+]
+
+
+class MockAgent:
+    def invoke(self, state):
+        prompt = state["messages"][-1][1] if isinstance(state["messages"][-1], tuple) else state["messages"][-1].content
+        prompt_lower = prompt.lower()
+        svc = ""
+        for s in ["fastapi-svc", "express-svc", "goworker-svc"]:
+            short = s.replace("-svc", "")
+            if short in prompt_lower or s in prompt_lower:
+                svc = s
+                break
+        if "trace" in prompt_lower:
+            response = _search_traces(svc, "6h", 10)
+        elif "log" in prompt_lower:
+            sev = "ERROR" if "error" in prompt_lower else ""
+            response = _search_logs(svc, "6h", sev, 10)
+        elif "alert" in prompt_lower:
+            response = _list_alerts()
+        elif "dashboard" in prompt_lower:
+            response = _list_dashboards()
+        elif "metric" in prompt_lower or "p99" in prompt_lower or "latency" in prompt_lower:
+            response = _get_metrics("6h")
+        elif "predict" in prompt_lower or "slo" in prompt_lower:
+            response = _predict_slo(svc)
+        elif "restart" in prompt_lower or "remediate" in prompt_lower:
+            response = _remediate_service(svc or "fastapi-svc")
+        elif "doc" in prompt_lower or "how" in prompt_lower or "help" in prompt_lower:
+            response = _search_docs(prompt, 3)
+        elif "service" in prompt_lower:
+            response = _list_services()
+        else:
+            response = _list_services()
+        return {"messages": [{"content": response}]}
 
 
 def _get_llm():
@@ -122,30 +169,36 @@ def _get_llm():
             base_url=base_url,
         )
 
-    else:
+    elif provider == "ollama":
+        import requests
+        try:
+            resp = requests.get("http://localhost:11434/api/tags", timeout=3)
+            models = resp.json().get("models", [])
+            model_names = [m["name"] for m in models]
+            if not model_names:
+                raise ValueError("Ollama is running but no models are installed. Run: ollama pull llama3.2:3b")
+            chosen = model or "llama3.2:3b"
+            if chosen not in model_names and "llama3.2:3b" in model_names:
+                chosen = "llama3.2:3b"
+            if chosen not in model_names:
+                raise ValueError(f"Ollama model '{chosen}' not found. Available: {', '.join(model_names[:5])}")
+        except requests.exceptions.ConnectionError:
+            raise ValueError("Ollama server not reachable on localhost:11434")
         from langchain_ollama import ChatOllama
-        return ChatOllama(
-            model=model or "llama3.2:3b",
-            temperature=temperature,
-        )
+        return ChatOllama(model=chosen, temperature=temperature)
+
+    else:
+        raise ValueError(f"Unknown LLM provider: {provider}")
 
 
-def create_agent(model: str = ""):
-    if model:
-        os.environ.setdefault("LLM_MODEL", model)
-    llm = _get_llm()
+def create_agent() -> Any:
     provider = os.environ.get("LLM_PROVIDER", "ollama")
-    print(f"Agent initialized with provider: {provider}, model: {llm.model}")
-    tools = [
-        signoz_list_services,
-        signoz_search_traces,
-        signoz_search_logs,
-        signoz_list_alerts,
-        signoz_list_dashboards,
-        signoz_get_metrics,
-        signoz_search_docs,
-        signoz_remediate,
-        signoz_predict_slo,
-    ]
-    agent = create_react_agent(llm, tools)
-    return agent
+    model = os.environ.get("LLM_MODEL", "")
+    try:
+        llm = _get_llm()
+        print(f"Agent initialized with provider: {provider}, model: {llm.model}")
+        from langgraph.prebuilt import create_react_agent
+        return create_react_agent(llm, TOOLS)
+    except Exception as e:
+        print(f"LLM {provider} not available ({e}). Using direct tool agent as fallback.")
+        return MockAgent()
