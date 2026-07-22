@@ -1,6 +1,24 @@
 import os
+import sys
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 import streamlit as st
-from agent import create_agent
+
+try:
+    from agent import create_agent
+    agent = create_agent()
+    USE_LLM = True
+except Exception as e:
+    agent = None
+    USE_LLM = False
+    err = str(e)
+
+from mcp_tool import (
+    list_services, search_traces, search_logs,
+    list_alerts, list_dashboards, get_metrics,
+    search_docs, predict_slo, remediate_service
+)
 
 st.set_page_config(
     page_title="SigNoz SRE Command Center",
@@ -37,16 +55,15 @@ st.markdown('<div class="sub-header">AI-powered SLO monitoring · Predictive ale
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-if "agent" not in st.session_state:
-    with st.spinner("Initializing agent..."):
-        st.session_state.agent = create_agent()
+if "pending_query" not in st.session_state:
+    st.session_state.pending_query = None
 
 with st.sidebar:
     st.markdown(f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">⚡ <span style="font-weight:600">System Status</span></div>', unsafe_allow_html=True)
-    p_color = "badge-green" if provider == "groq" else "badge-orange"
-    st.markdown(f'<span class="status-badge {p_color}">LLM: {provider}</span>', unsafe_allow_html=True)
-    st.markdown(f'<span class="status-badge badge-purple" style="margin-left:4px">{model}</span>', unsafe_allow_html=True)
+    p_color = "badge-green" if USE_LLM else "badge-orange"
+    mode = provider if USE_LLM else "direct (no LLM)"
+    st.markdown(f'<span class="status-badge {p_color}">Mode: {mode}</span>', unsafe_allow_html=True)
+    st.markdown(f'<span class="status-badge badge-purple" style="margin-left:4px">{model if USE_LLM else "tool-only"}</span>', unsafe_allow_html=True)
     st.markdown("")
 
     if st.button("🗑️ Clear conversation", use_container_width=True):
@@ -62,7 +79,8 @@ with st.sidebar:
         "What are my p99 latencies?",
     ]:
         if st.button(q, key=f"q-{q}", use_container_width=True):
-            st.session_state.messages.append({"role": "user", "content": q})
+            st.session_state.pending_query = q
+            st.rerun()
 
     st.markdown('<div class="query-category">📈 SLO & Predictions</div>', unsafe_allow_html=True)
     for q in [
@@ -71,7 +89,8 @@ with st.sidebar:
         "List all alert rules",
     ]:
         if st.button(q, key=f"q-{q}", use_container_width=True):
-            st.session_state.messages.append({"role": "user", "content": q})
+            st.session_state.pending_query = q
+            st.rerun()
 
     st.markdown('<div class="query-category">⚙️ Remediation</div>', unsafe_allow_html=True)
     for q in [
@@ -80,37 +99,84 @@ with st.sidebar:
         "How do I create a dashboard?",
     ]:
         if st.button(q, key=f"q-{q}", use_container_width=True):
-            st.session_state.messages.append({"role": "user", "content": q})
+            st.session_state.pending_query = q
+            st.rerun()
 
     st.markdown('<div class="footer">SigNoz SRE Command Center v2.0</div>', unsafe_allow_html=True)
+
+
+def run_direct(prompt):
+    prompt_lower = prompt.lower()
+    if "service" in prompt_lower and ("list" in prompt_lower or "run" in prompt_lower or "what" in prompt_lower):
+        return list_services()
+    elif "trace" in prompt_lower:
+        svc = ""
+        for s in ["fastapi-svc", "express-svc", "goworker-svc"]:
+            if s.replace("-svc", "") in prompt_lower or s in prompt_lower:
+                svc = s
+                break
+        return search_traces(svc, "6h", 10)
+    elif "log" in prompt_lower:
+        svc = ""
+        sev = ""
+        for s in ["fastapi-svc", "express-svc", "goworker-svc"]:
+            if s.replace("-svc", "") in prompt_lower or s in prompt_lower:
+                svc = s
+                break
+        if "error" in prompt_lower:
+            sev = "ERROR"
+        return search_logs(svc, "6h", sev, 10)
+    elif "alert" in prompt_lower:
+        return list_alerts()
+    elif "dashboard" in prompt_lower:
+        return list_dashboards()
+    elif "metric" in prompt_lower or "p99" in prompt_lower or "latency" in prompt_lower:
+        return get_metrics("6h")
+    elif "predict" in prompt_lower or "slo" in prompt_lower:
+        svc = ""
+        for s in ["fastapi-svc", "express-svc", "goworker-svc"]:
+            if s.replace("-svc", "") in prompt_lower or s in prompt_lower:
+                svc = s
+                break
+        return predict_slo(svc)
+    elif "restart" in prompt_lower or "remediate" in prompt_lower:
+        svc = "fastapi-svc"
+        for s in ["fastapi-svc", "express-svc", "goworker-svc"]:
+            if s.replace("-svc", "") in prompt_lower or s in prompt_lower:
+                svc = s
+                break
+        return remediate_service(svc)
+    elif "doc" in prompt_lower or "how" in prompt_lower or "help" in prompt_lower:
+        return search_docs(prompt, 3)
+    else:
+        return list_services()
+
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-if prompt := st.chat_input("Ask about your system..."):
+prompt = st.chat_input("Ask about your system...")
+
+if st.session_state.pending_query:
+    prompt = st.session_state.pending_query
+    st.session_state.pending_query = None
+
+if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    if st.session_state.agent is None:
-        response = "⚠️ Agent not initialized. Please refresh the page."
-    else:
-        with st.chat_message("assistant"):
-            with st.spinner("🔍 Querying SigNoz..."):
-                try:
-                    result = st.session_state.agent.invoke(
-                        {"messages": [("human", prompt)]}
-                    )
+    with st.chat_message("assistant"):
+        with st.spinner("🔍 Querying SigNoz..."):
+            try:
+                if USE_LLM:
+                    result = agent.invoke({"messages": [("human", prompt)]})
                     response = result["messages"][-1].content
-                except Exception as e:
-                    err_msg = str(e)
-                    if "GROQ_API_KEY" in err_msg:
-                        response = "⚠️ Groq API key is missing or invalid. Set `GROQ_API_KEY` in `.env`."
-                    elif "API_KEY" in err_msg:
-                        response = "⚠️ API key issue. Check your `SIGNOZ_API_KEY` in `.env`."
-                    else:
-                        response = "⚠️ Something went wrong. Ensure SigNoz is running (`docker ps | grep signoz`) and try again."
-            st.markdown(response)
+                else:
+                    response = run_direct(prompt)
+            except Exception as e:
+                response = f"⚠️ {str(e)}"
+        st.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
