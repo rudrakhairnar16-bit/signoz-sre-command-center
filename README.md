@@ -7,7 +7,7 @@
 [![Integration Tests](https://img.shields.io/badge/integration%20tests-20%20%2F%2020%20passing-brightgreen)]()
 [![SigNoz](https://img.shields.io/badge/SigNoz-Track%202-blue)]()
 
-> **Team:** Rudra Khairnar & Het Patel — KPGU  
+> **Team:** Rudra Khaire & Het Patel — KPGU  
 > **Hackathon:** [Agents of SigNoz](https://github.com/SigNoz/signoz) — Track 2 (Signals & Dashboards)  
 > **Problem:** SRE teams lack a unified SLO dashboard with AI-driven analysis and automated recovery.
 
@@ -557,5 +557,5 @@ signoz-sre-command-center/
 
 ## Team
 
-- **Rudra Khairnar** — Instrumentation, MCP, AI Agent, Auto-remediation
+- **Rudra Khaire** — Instrumentation, MCP, AI Agent, Auto-remediation
 - **Het Patel** — Dashboard, Alerts, Demo, Documentation
