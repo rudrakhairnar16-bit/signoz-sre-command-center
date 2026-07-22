@@ -13,12 +13,11 @@
 
 ---
 
-## 👀 What it looks like
+## What it looks like
 
-<!-- Screenshots (replace with actual links once uploaded) -->
 | SLO Dashboard | AI Agent Chat | Auto-Remediation |
 |---|---|---|
-| *(screenshot)* | *(screenshot)* | *(screenshot)* |
+| ![SLO Dashboard](assets/1.png) | ![AI Agent Chat](assets/2.png) | ![Auto-Remediation](assets/3.png) |
 
 ---
 
