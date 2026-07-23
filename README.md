@@ -534,26 +534,7 @@ signoz-sre-command-center/
 └── README.md                 # This file
 ```
 
-## Tech Stack
 
-| Category | Tools |
-|----------|-------|
-| Observability | SigNoz, OpenTelemetry, ClickHouse |
-| Instrumentation | Python OTel SDK, Node.js OTel SDK, Go OTel SDK |
-| AI/ML | LangGraph, Ollama / Groq / Gemini / Claude / DeepSeek, Streamlit |
-| Backend | FastAPI, Express.js, Go, Python Flask |
-| Infrastructure | Docker, Docker Compose, Foundry |
-
-## Demo Script (2 minutes)
-
-| Time | Scene |
-|------|-------|
-| 0:00 | Normal ops — Green dashboard, healthy SLOs |
-| 0:15 | Incident — Run failure simulator, latency spikes, EB burns |
-| 0:35 | AI analysis — "What caused the latency spike?" → Agent diagnoses |
-| 0:55 | Auto-remediation — Burn rate alert → Webhook → Service restart |
-| 1:15 | Recovery — Dashboard turns green, AI reports impact |
-| 1:35 | Closing — Architecture overview |
 
 ## Team
 
